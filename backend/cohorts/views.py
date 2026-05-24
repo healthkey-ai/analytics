@@ -1,0 +1,150 @@
+from django.db.models import Q
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from patients.models import PatientInfo
+
+
+OUTCOME_OPTIONS = [
+    "Complete Response",
+    "Very Good Partial Response",
+    "Partial Response",
+    "Minimal Response",
+    "Stable Disease",
+    "Progressive Disease",
+]
+
+MM_FIRST_LINE = [
+    "VRd (Bortezomib, Lenalidomide, and Dexamethasone)",
+    "Dara-VRd (Daratumumab, Bortezomib, Lenalidomide, and Dexamethasone)",
+    "Dara-Rd (Daratumumab, Lenalidomide, and Dexamethasone)",
+    "VRd Lite (Bortezomib, Lenalidomide, and Dexamethasone)",
+    "KRd (Carfilzomib, Lenalidomide, and Dexamethasone)",
+    "Isa-VRd (Isatuximab, Bortezomib, Lenalidomide, and Dexamethasone)",
+    "Isa-KRd (Isatuximab, Carfilzomib, Lenalidomide, and Dexamethasone)",
+    "CyBorD (Cyclophosphamide, Bortezomib, and Dexamethasone)",
+]
+MM_SECOND_LINE = [
+    "KPd (Carfilzomib, Pomalidomide, and Dexamethasone)",
+    "EPd (Elotuzumab, Pomalidomide, and Dexamethasone)",
+    "SVd (Selinexor, Bortezomib, and Dexamethasone)",
+    "Daratumumab (Darzalex/Darzalex Faspro) Monotherapy",
+    "Carfilzomib (Kyprolis) Monotherapy",
+    "Ixazomib (Ninlaro)",
+    "Pomalidomide (Pomalyst) Monotherapy",
+    "Isatuximab (Sarclisa) Monotherapy",
+    "Venetoclax Monotherapy",
+    "Selinexor (Xpovio)",
+    "Elotuzumab (Empliciti) Monotherapy",
+]
+MM_LATER_LINE = [
+    "Ide-cel (Abecma) Monotherapy",
+    "Cilta-cel (Carvykti) Monotherapy",
+    "Teclistamab (Tecvayli) Monotherapy",
+    "Belantamab Mafodotin (Blenrep) Monotherapy",
+    "SVd (Selinexor, Bortezomib, and Dexamethasone)",
+    "EPd (Elotuzumab, Pomalidomide, and Dexamethasone)",
+    "Selinexor (Xpovio)",
+    "Daratumumab (Darzalex/Darzalex Faspro) Monotherapy",
+    "Carfilzomib (Kyprolis) Monotherapy",
+    "Pomalidomide (Pomalyst) Monotherapy",
+    "Venetoclax Monotherapy",
+    "Cyclophosphamide or Melphalan Monotherapy",
+]
+MM_REFRACTORY = [
+    "IMiD-refractory (lenalidomide/pomalidomide)",
+    "PI-refractory (bortezomib/carfilzomib)",
+    "Double-refractory (PI + IMiD)",
+    "Triple-refractory (PI + IMiD + anti-CD38)",
+    "Refractory to prior therapy",
+]
+
+BC_FIRST_LINE = [
+    "CDK4/6 Inhibitor + Letrozole",
+    "CDK4/6 Inhibitor + Fulvestrant",
+    "Trastuzumab + Pertuzumab + Taxane",
+    "Neoadjuvant Chemotherapy",
+    "Adjuvant Chemotherapy",
+    "Tamoxifen",
+    "Aromatase Inhibitor",
+]
+BC_SECOND_LINE = [
+    "T-DM1 (Trastuzumab emtansine)",
+    "Trastuzumab Deruxtecan (T-DXd)",
+    "Sacituzumab Govitecan",
+    "Fulvestrant",
+    "Capecitabine",
+    "Vinorelbine",
+    "PARP Inhibitor (Olaparib/Talazoparib)",
+]
+BC_LATER_LINE = [
+    "Trastuzumab Deruxtecan (T-DXd)",
+    "Sacituzumab Govitecan",
+    "Eribulin",
+    "Capecitabine",
+    "Gemcitabine + Carboplatin",
+    "Pembrolizumab + Chemotherapy",
+    "Tucatinib + Trastuzumab + Capecitabine",
+]
+
+THERAPY_MAP = {
+    "Multiple Myeloma": {
+        "first_line_therapies": MM_FIRST_LINE,
+        "second_line_therapies": MM_SECOND_LINE,
+        "later_line_therapies": MM_LATER_LINE,
+        "refractory_statuses": MM_REFRACTORY,
+        "stages": ["ISS Stage I", "ISS Stage II", "ISS Stage III"],
+        "cytogenetic_markers": [
+            "del(17p)", "t(4;14)", "t(14;16)", "1q21 amplification", "hyperdiploidy",
+        ],
+        "extra_filters": {
+            "mm_specific": True,
+            "has_sct_filter": True,
+            "crab_filter": True,
+        },
+    },
+    "Breast Cancer": {
+        "first_line_therapies": BC_FIRST_LINE,
+        "second_line_therapies": BC_SECOND_LINE,
+        "later_line_therapies": BC_LATER_LINE,
+        "refractory_statuses": [],
+        "stages": ["I", "II", "IIA", "IIB", "III", "IIIA", "IIIB", "IIIC", "IV"],
+        "cytogenetic_markers": [],
+        "extra_filters": {
+            "bc_specific": True,
+            "er_pr_her2": True,
+        },
+    },
+}
+
+
+@api_view(["GET"])
+def form_settings(request):
+    """Return dropdown options for the cohort filter panel."""
+    disease = request.query_params.get("disease", "Multiple Myeloma")
+    disease_config = THERAPY_MAP.get(disease, THERAPY_MAP["Multiple Myeloma"])
+
+    # Pull distinct values actually present in the DB for this disease
+    qs = PatientInfo.objects.filter(disease=disease)
+    regions = sorted(
+        qs.exclude(region__isnull=True).values_list("region", flat=True).distinct()
+    )
+    ethnicities = sorted(
+        qs.exclude(ethnicity__isnull=True).values_list("ethnicity", flat=True).distinct()
+    )
+    diseases = list(
+        PatientInfo.objects.exclude(disease__isnull=True)
+        .values_list("disease", flat=True)
+        .distinct()
+        .order_by("disease")
+    )
+
+    return Response({
+        "diseases": diseases,
+        **disease_config,
+        "outcome_options": OUTCOME_OPTIONS,
+        "regions": regions,
+        "ethnicity_options": ethnicities,
+        "ecog_values": [0, 1, 2, 3],
+        "smoking_options": ["Never", "Former", "Current"],
+        "therapy_line_options": [1, 2, 3, 4],
+    })
