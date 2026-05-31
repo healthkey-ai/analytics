@@ -7,6 +7,7 @@ class PatientInfo(models.Model):
     # demographics
     patient_age = models.IntegerField(null=True)
     gender = models.CharField(max_length=2, null=True)
+    race = models.TextField(null=True)
     ethnicity = models.TextField(null=True)
     country = models.CharField(max_length=255, null=True)
     region = models.CharField(max_length=255, null=True)

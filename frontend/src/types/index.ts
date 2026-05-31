@@ -109,6 +109,7 @@ export interface MetricsResponse {
   demographics: {
     age_distribution: { bucket: string; count: number; pct: number }[]
     gender: { gender: string; count: number; pct: number }[]
+    race: { race: string; count: number; pct: number }[]
     ethnicity: { ethnicity: string; count: number; pct: number }[]
     region: { region: string; count: number }[]
     smoking: { status: string; count: number; pct: number }[]

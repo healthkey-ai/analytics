@@ -106,6 +106,37 @@ export default function Demographics({ data }: Props) {
         )}
       </div>
 
+      {/* Race horizontal bar */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          Race
+        </p>
+        {data.race && data.race.length > 0 ? (
+          <ResponsiveContainer
+            width="100%"
+            height={Math.max(160, data.race.length * 32)}
+          >
+            <BarChart
+              data={data.race}
+              layout="vertical"
+              margin={{ top: 4, right: 48, left: 8, bottom: 4 }}
+            >
+              <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+              <YAxis
+                type="category"
+                dataKey="race"
+                tick={{ fontSize: 10 }}
+                width={180}
+              />
+              <Tooltip contentStyle={{ fontSize: 12 }} />
+              <Bar dataKey="count" fill="#7c3aed" radius={[0, 3, 3, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <NoData />
+        )}
+      </div>
+
       {/* Ethnicity horizontal bar */}
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">

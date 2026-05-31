@@ -44,6 +44,17 @@ def compute(qs):
         for r in gender_rows
     ]
 
+    # Race
+    race_rows = (
+        qs.exclude(race__isnull=True)
+        .values('race').annotate(count=Count('id')).order_by('-count')
+    )
+    race = [
+        {"race": r['race'], "count": r['count'],
+         "pct": round(r['count'] / total * 100, 1)}
+        for r in race_rows
+    ]
+
     # Ethnicity
     ethnicity_rows = (
         qs.exclude(ethnicity__isnull=True)
@@ -76,6 +87,7 @@ def compute(qs):
     return {
         "age_distribution": age_dist,
         "gender":           gender,
+        "race":             race,
         "ethnicity":        ethnicity,
         "region":           region,
         "smoking":          smoking,
