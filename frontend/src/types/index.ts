@@ -4,7 +4,7 @@ export interface CohortFilters {
   age_min?: number
   age_max?: number
   gender?: string
-  ethnicity?: string[]
+  race?: string[]
   region?: string[]
   ecog?: number[]
   cytogenetic_markers?: string[]
@@ -47,7 +47,7 @@ export interface FormSettings {
   cytogenetic_markers: string[]
   refractory_statuses: string[]
   regions: string[]
-  ethnicity_options: string[]
+  race_options: string[]
   mrd_status_options: string[]
   ecog_values: number[]
   smoking_options: string[]

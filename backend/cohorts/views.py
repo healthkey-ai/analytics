@@ -128,8 +128,8 @@ def form_settings(request):
     regions = sorted(
         qs.exclude(region__isnull=True).values_list("region", flat=True).distinct()
     )
-    ethnicities = sorted(
-        qs.exclude(ethnicity__isnull=True).values_list("ethnicity", flat=True).distinct()
+    races = sorted(
+        qs.exclude(race__isnull=True).values_list("race", flat=True).distinct()
     )
     diseases = list(
         PatientInfo.objects.exclude(disease__isnull=True)
@@ -143,7 +143,7 @@ def form_settings(request):
         **disease_config,
         "outcome_options": OUTCOME_OPTIONS,
         "regions": regions,
-        "ethnicity_options": ethnicities,
+        "race_options": races,
         "ecog_values": [0, 1, 2, 3],
         "smoking_options": ["Never", "Former", "Current"],
         "therapy_line_options": [1, 2, 3, 4],

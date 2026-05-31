@@ -152,8 +152,8 @@ export default function CohortPanel({ filters, settings, onUpdate, onClear, coho
             </div>
           </div>
           <div>
-            <p className="text-xs text-slate-400 mb-1">Ethnicity</p>
-            <MultiSelect options={settings?.ethnicity_options ?? []} selected={sel('ethnicity')} onChange={upd('ethnicity')} />
+            <p className="text-xs text-slate-400 mb-1">Race</p>
+            <MultiSelect options={settings?.race_options ?? []} selected={sel('race')} onChange={upd('race')} />
           </div>
         </Section>
 

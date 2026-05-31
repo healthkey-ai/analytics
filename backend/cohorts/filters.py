@@ -58,10 +58,10 @@ def apply_cohort_filters(request) -> "QuerySet[PatientInfo]":
     if gender:
         qs = qs.filter(gender=gender)
 
-    # ── ethnicity ─────────────────────────────────────────────────────────────
-    ethnicities = _list("ethnicity")
-    if ethnicities:
-        qs = qs.filter(ethnicity__in=ethnicities)
+    # ── race ──────────────────────────────────────────────────────────────────
+    races = _list("race")
+    if races:
+        qs = qs.filter(race__in=races)
 
     # ── geography ─────────────────────────────────────────────────────────────
     regions = _list("region")
