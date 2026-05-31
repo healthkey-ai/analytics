@@ -14,9 +14,9 @@ interface Props {
 }
 
 const LINE_CONFIG = [
-  { key: 'first_line',  label: '1st Line', color: '#0d9488' },
-  { key: 'second_line', label: '2nd Line', color: '#2563eb' },
-  { key: 'later_line',  label: '3rd Line+', color: '#d97706' },
+  { key: 'os',  label: 'OS',  color: '#2563eb' },
+  { key: 'pfs', label: 'PFS', color: '#0d9488' },
+  { key: 'efs', label: 'EFS', color: '#d97706' },
 ] as const
 
 function mergeKMCurves(data: MetricsResponse['survival']) {
@@ -30,8 +30,8 @@ function mergeKMCurves(data: MetricsResponse['survival']) {
     const point: Record<string, number> = { time }
     LINE_CONFIG.forEach(({ key }) => {
       const curve = data[key].curve
-      const last = [...curve].reverse().find((p) => p.time <= time)
-      point[key] = last ? last.survival : 1.0
+      const last  = [...curve].reverse().find((p) => p.time <= time)
+      point[key]  = last ? last.survival : 1.0
     })
     return point
   })
@@ -53,8 +53,8 @@ export default function SurvivalCurves({ data }: Props) {
 
   return (
     <div>
-      {/* Median PFS summary */}
-      <div className="flex gap-6 mb-4">
+      {/* Summary row */}
+      <div className="flex flex-wrap gap-6 mb-4">
         {LINE_CONFIG.map(({ key, label, color }) => {
           const line = data[key]
           return line.n > 0 ? (
@@ -64,21 +64,21 @@ export default function SurvivalCurves({ data }: Props) {
                 <span className="font-semibold">{label}</span>
                 {' · n='}
                 {line.n}
-                {line.median_pfs != null
-                  ? ` · mPFS ${line.median_pfs.toFixed(1)} mo`
-                  : ' · mPFS not reached'}
+                {line.median != null
+                  ? ` · median ${line.median.toFixed(1)} mo`
+                  : ' · median not reached'}
               </span>
             </div>
           ) : null
         })}
       </div>
 
-      <ResponsiveContainer width="100%" height={320}>
+      <ResponsiveContainer width="100%" height={340}>
         <LineChart data={chartData} margin={{ top: 4, right: 24, left: 0, bottom: 24 }}>
           <XAxis
             dataKey="time"
             type="number"
-            label={{ value: 'Months', position: 'insideBottom', offset: -12, fontSize: 11 }}
+            label={{ value: 'Months from 1st-line start', position: 'insideBottom', offset: -12, fontSize: 11 }}
             tick={{ fontSize: 11 }}
             domain={[0, 'auto']}
           />
@@ -86,7 +86,7 @@ export default function SurvivalCurves({ data }: Props) {
             domain={[0, 1]}
             tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
             tick={{ fontSize: 11 }}
-            label={{ value: 'Survival', angle: -90, position: 'insideLeft', fontSize: 11 }}
+            label={{ value: 'Survival probability', angle: -90, position: 'insideLeft', fontSize: 11, offset: 10 }}
           />
           <Tooltip
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -114,8 +114,10 @@ export default function SurvivalCurves({ data }: Props) {
       </ResponsiveContainer>
 
       <p className="text-xs text-gray-400 mt-2">
-        Event = Progressive Disease. Patients without progression are censored at end of treatment.
-        Dashed line at 50% = median PFS reference.
+        <span className="font-medium text-blue-600">OS</span>: 1L start → death. &nbsp;
+        <span className="font-medium text-teal-600">PFS</span>: 1L start → first progression (any line) or death. &nbsp;
+        <span className="font-medium text-amber-600">EFS</span>: 1L start → treatment change, progression, or death. &nbsp;
+        Patients without an event are censored at last known contact. Dashed line = 50% (median reference).
       </p>
     </div>
   )

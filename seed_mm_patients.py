@@ -440,6 +440,47 @@ def treatment_duration(outcome: str) -> int:
     lo, hi = RESPONSE_DURATION[outcome]
     return random.randint(lo, hi)
 
+# ── death date ────────────────────────────────────────────────────────────────
+
+CUTOFF = date(2026, 5, 31)
+
+# Months after last-treatment-end until death, by last outcome
+POST_TX_MONTHS = {
+    "Progressive Disease":        (1,  10),
+    "Minimal Response":           (3,  18),
+    "Stable Disease":             (4,  24),
+    "Partial Response":           (8,  36),
+    "Very Good Partial Response": (12, 48),
+    "Complete Response":          (18, 60),
+}
+
+DEATH_PROB = {
+    "bad":      [0.72, 0.88, 0.94, 0.97],
+    "moderate": [0.38, 0.56, 0.70, 0.80],
+    "good":     [0.14, 0.24, 0.36, 0.48],
+}
+
+def _death_outcome_cat(outcome):
+    if outcome in ("Progressive Disease", "Minimal Response"):
+        return "bad"
+    if outcome == "Stable Disease":
+        return "moderate"
+    return "good"
+
+def generate_death_date(last_end, last_outcome, n_lines, high_risk):
+    if not last_end or not last_outcome:
+        return None
+    cat  = _death_outcome_cat(last_outcome)
+    idx  = min(n_lines - 1, 3)
+    prob = DEATH_PROB[cat][idx]
+    if high_risk:
+        prob = min(0.97, prob * 1.40)
+    if random.random() > prob:
+        return None
+    lo, hi = POST_TX_MONTHS.get(last_outcome, (4, 24))
+    death = add_months(last_end, random.randint(lo, hi))
+    return death if death <= CUTOFF else None
+
 # ── SCT ───────────────────────────────────────────────────────────────────────
 
 def build_sct(age, fl_end, fl_outcome):
@@ -630,6 +671,19 @@ def build_patient(i):
                if later_therapies_json
                else (lt_end or sl_end or fl_end))
 
+    # Last therapy outcome (for death-date generation)
+    if later_therapies_json:
+        _last_end     = date.fromisoformat(later_therapies_json[-1]["end_date"])
+        _last_outcome = later_therapies_json[-1]["outcome"]
+    elif lt_end:
+        _last_end, _last_outcome = lt_end, lt_outcome
+    elif sl_end:
+        _last_end, _last_outcome = sl_end, sl_outcome
+    else:
+        _last_end, _last_outcome = fl_end, fl_outcome
+
+    death_dt = generate_death_date(_last_end, _last_outcome, n_lines, high_risk)
+
     refractory_status = derive_refractory_status(all_lines)
 
     prior_therapy_label = {
@@ -760,6 +814,7 @@ def build_patient(i):
         "no_hepatitis_c_status":             True,
         "no_active_infection_status":        random.random() < 0.88,
         "smoking_status":                    smoking,
+        "death_date":                        death_dt,
     }
 
 # ── database insert ───────────────────────────────────────────────────────────
@@ -815,6 +870,7 @@ INSERT_PATIENT = """
         no_geographic_exposure_risk, no_hiv_status,
         no_hepatitis_b_status, no_hepatitis_c_status, no_active_infection_status,
         smoking_status,
+        death_date,
         created_at, updated_at
     ) VALUES (
         %(person_id)s, %(patient_age)s, %(gender)s, %(ethnicity)s,
@@ -863,6 +919,7 @@ INSERT_PATIENT = """
         %(no_geographic_exposure_risk)s, %(no_hiv_status)s,
         %(no_hepatitis_b_status)s, %(no_hepatitis_c_status)s,
         %(no_active_infection_status)s, %(smoking_status)s,
+        %(death_date)s,
         NOW(), NOW()
     )
     ON CONFLICT (person_id) DO NOTHING

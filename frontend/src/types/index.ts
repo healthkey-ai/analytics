@@ -135,14 +135,14 @@ export interface MetricsResponse {
     }
   }
   survival: {
-    first_line:  SurvivalLine
-    second_line: SurvivalLine
-    later_line:  SurvivalLine
+    os:  SurvivalLine
+    pfs: SurvivalLine
+    efs: SurvivalLine
   }
 }
 
 export interface SurvivalLine {
   curve: { time: number; survival: number; at_risk: number }[]
   n: number
-  median_pfs: number | null
+  median: number | null
 }

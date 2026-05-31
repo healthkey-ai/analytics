@@ -81,6 +81,9 @@ class PatientInfo(models.Model):
     nodes_stage = models.TextField(null=True)
     distant_metastasis_stage = models.TextField(null=True)
 
+    # outcomes / follow-up
+    death_date = models.DateField(null=True)
+
     # treatment
     prior_therapy = models.TextField(null=True)
     therapy_lines_count = models.IntegerField(null=True)
