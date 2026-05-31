@@ -1,8 +1,8 @@
-from django.db.models import Count
+from collections import Counter
 
 
-def compute(qs):
-    total = qs.count()
+def compute(records):
+    total = len(records)
     if not total:
         return {}
 
@@ -19,67 +19,50 @@ def compute(qs):
     ]
     age_dist = []
     for label, lo, hi in age_buckets:
-        sub = qs
-        if lo is not None:
-            sub = sub.filter(patient_age__gte=lo)
-        if hi is not None:
-            sub = sub.filter(patient_age__lte=hi)
-        count = sub.count()
+        count = sum(
+            1 for r in records
+            if r.get("patient_age") is not None
+            and (lo is None or r["patient_age"] >= lo)
+            and (hi is None or r["patient_age"] <= hi)
+        )
         if count:
             age_dist.append({"bucket": label, "count": count,
                              "pct": round(count / total * 100, 1)})
 
     # Gender
-    gender_rows = (
-        qs.exclude(gender__isnull=True)
-        .values("gender")
-        .annotate(count=Count("id"))
-        .order_by("-count")
-    )
     gender_map = {"M": "Male", "F": "Female"}
+    gender_counts = Counter(r["gender"] for r in records if r.get("gender"))
     gender = [
-        {"gender": gender_map.get(r["gender"], r["gender"]),
-         "count": r["count"],
-         "pct": round(r["count"] / total * 100, 1)}
-        for r in gender_rows
+        {"gender": gender_map.get(g, g), "count": c,
+         "pct": round(c / total * 100, 1)}
+        for g, c in gender_counts.most_common()
     ]
 
     # Ethnicity
-    ethnicity_rows = (
-        qs.exclude(ethnicity__isnull=True)
-        .values("ethnicity")
-        .annotate(count=Count("id"))
-        .order_by("-count")
-    )
+    ethnicity_counts = Counter(r["ethnicity"] for r in records if r.get("ethnicity"))
     ethnicity = [
-        {"ethnicity": r["ethnicity"], "count": r["count"],
-         "pct": round(r["count"] / total * 100, 1)}
-        for r in ethnicity_rows
+        {"ethnicity": e, "count": c, "pct": round(c / total * 100, 1)}
+        for e, c in ethnicity_counts.most_common()
     ]
 
     # Region (top 15)
-    region_rows = (
-        qs.exclude(region__isnull=True)
-        .values("region")
-        .annotate(count=Count("id"))
-        .order_by("-count")[:15]
-    )
-    region = [{"region": r["region"], "count": r["count"]} for r in region_rows]
+    region_counts = Counter(r["region"] for r in records if r.get("region"))
+    region = [
+        {"region": reg, "count": c}
+        for reg, c in region_counts.most_common(15)
+    ]
 
     # Smoking
-    smoking_rows = (
-        qs.exclude(smoking_status__isnull=True)
-        .values("smoking_status")
-        .annotate(count=Count("id"))
-        .order_by("-count")
-    )
-    smoking = [{"status": r["smoking_status"], "count": r["count"],
-                "pct": round(r["count"] / total * 100, 1)} for r in smoking_rows]
+    smoking_counts = Counter(r["smoking_status"] for r in records if r.get("smoking_status"))
+    smoking = [
+        {"status": s, "count": c, "pct": round(c / total * 100, 1)}
+        for s, c in smoking_counts.most_common()
+    ]
 
     return {
         "age_distribution": age_dist,
-        "gender": gender,
-        "ethnicity": ethnicity,
-        "region": region,
-        "smoking": smoking,
+        "gender":           gender,
+        "ethnicity":        ethnicity,
+        "region":           region,
+        "smoking":          smoking,
     }

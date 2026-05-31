@@ -14,22 +14,19 @@ from metrics.services import (
 
 @api_view(["GET"])
 def metrics(request):
-    """
-    Return all analytics metrics for the given cohort filters.
-    Accepts the same query params as the cohort filter panel.
-    """
     qs = apply_cohort_filters(request)
-    count = qs.count()
+    records = list(qs.values())
+    count = len(records)
 
     if count == 0:
         return Response({"cohort": {"count": 0}})
 
     return Response({
-        "cohort": {"count": count},
-        "response_rates":      response_rates.compute(qs),
-        "treatment_patterns":  treatment_patterns.compute(qs),
-        "demographics":        demographics.compute(qs),
-        "staging":             staging.compute(qs),
-        "labs":                labs.compute(qs),
-        "treatment_duration":  treatment_duration.compute(qs),
+        "cohort":              {"count": count},
+        "response_rates":      response_rates.compute(records),
+        "treatment_patterns":  treatment_patterns.compute(records),
+        "demographics":        demographics.compute(records),
+        "staging":             staging.compute(records),
+        "labs":                labs.compute(records),
+        "treatment_duration":  treatment_duration.compute(records),
     })
