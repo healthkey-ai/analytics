@@ -9,6 +9,7 @@ from metrics.services import (
     staging,
     labs,
     treatment_duration,
+    survival,
 )
 
 
@@ -28,4 +29,5 @@ def metrics(request):
         "staging":             staging.compute(qs),
         "labs":                labs.compute(qs),
         "treatment_duration":  treatment_duration.compute(qs),
+        "survival":            survival.compute(qs),
     })

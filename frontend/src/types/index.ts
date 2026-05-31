@@ -134,4 +134,15 @@ export interface MetricsResponse {
       distribution: { bucket: string; count: number }[]
     }
   }
+  survival: {
+    first_line:  SurvivalLine
+    second_line: SurvivalLine
+    later_line:  SurvivalLine
+  }
+}
+
+export interface SurvivalLine {
+  curve: { time: number; survival: number; at_risk: number }[]
+  n: number
+  median_pfs: number | null
 }
