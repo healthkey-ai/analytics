@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import dj_database_url
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
@@ -31,16 +32,16 @@ MIDDLEWARE = [
 ROOT_URLCONF = "analytics_project.urls"
 WSGI_APPLICATION = "analytics_project.wsgi.application"
 
+_DEFAULT_DB_URL = (
+    "postgresql://ctomop_dev_user:IehVp8TGNcelOymGcjtfL6Up6W63DOf2"
+    "@dpg-d7pqr35ckfvc73bm0lc0-a.oregon-postgres.render.com/ctomop_dev"
+)
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "ctomop_dev"),
-        "USER": os.environ.get("DB_USER", "ctomop_dev_user"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", "IehVp8TGNcelOymGcjtfL6Up6W63DOf2"),
-        "HOST": os.environ.get("DB_HOST", "dpg-d7pqr35ckfvc73bm0lc0-a.oregon-postgres.render.com"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
-        "OPTIONS": {"sslmode": "require"},
-    }
+    "default": dj_database_url.config(
+        default=os.environ.get("DATABASE_URL", _DEFAULT_DB_URL),
+        conn_max_age=600,
+        ssl_require=True,
+    )
 }
 
 LANGUAGE_CODE = "en-us"
