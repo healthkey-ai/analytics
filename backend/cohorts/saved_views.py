@@ -1,6 +1,7 @@
 import csv
 import io
 import re
+from typing import Optional
 
 from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
@@ -144,7 +145,7 @@ def _csv_stream(qs):
         yield buf.getvalue()
 
 
-def _validate_filter_cardinality(filters: dict) -> str | None:
+def _validate_filter_cardinality(filters: dict) -> Optional[str]:
     """Return an error message if any list-valued filter exceeds the max cardinality."""
     for key, val in filters.items():
         if isinstance(val, list) and len(val) > FILTER_LIST_MAX_VALUES:
