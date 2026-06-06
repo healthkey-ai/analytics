@@ -1,7 +1,23 @@
 import axios from 'axios'
-import type { CohortFilters, FormSettings, MetricsResponse } from '../types'
+import type { CohortFilters, FormSettings, MetricsResponse, SavedCohort } from '../types'
 
-const api = axios.create({ baseURL: '/api' })
+function getCsrfToken(): string {
+  const match = document.cookie.match(/csrftoken=([^;]+)/)
+  return match ? match[1] : ''
+}
+
+const api = axios.create({
+  baseURL: '/api',
+  withCredentials: true,
+})
+
+api.interceptors.request.use(config => {
+  const token = getCsrfToken()
+  if (token) {
+    config.headers['X-CSRFToken'] = token
+  }
+  return config
+})
 
 function toParams(filters: CohortFilters): URLSearchParams {
   const p = new URLSearchParams()
@@ -25,3 +41,45 @@ export async function fetchMetrics(filters: CohortFilters): Promise<MetricsRespo
   const { data } = await api.get<MetricsResponse>(`/metrics/?${toParams(filters)}`)
   return data
 }
+
+// Auth
+export async function fetchCurrentUser() {
+  const { data } = await api.get('/auth/user/')
+  return data
+}
+
+export async function login(email: string, password: string) {
+  const { data } = await api.post('/auth/login/', { email, password })
+  return data
+}
+
+export async function logout() {
+  await api.post('/auth/logout/')
+}
+
+export async function signup(email: string, password: string, name: string) {
+  const { data } = await api.post('/auth/signup/', { email, password, name })
+  return data
+}
+
+// Saved cohorts
+export async function fetchSavedCohorts(): Promise<SavedCohort[]> {
+  const { data } = await api.get<SavedCohort[]>('/cohorts/saved/')
+  return data
+}
+
+export async function createSavedCohort(payload: { name: string; description: string; filters: CohortFilters }): Promise<SavedCohort> {
+  const { data } = await api.post<SavedCohort>('/cohorts/saved/', payload)
+  return data
+}
+
+export async function updateSavedCohort(id: number, payload: { name?: string; description?: string; filters?: CohortFilters }): Promise<SavedCohort> {
+  const { data } = await api.put<SavedCohort>(`/cohorts/saved/${id}/`, payload)
+  return data
+}
+
+export async function deleteSavedCohort(id: number): Promise<void> {
+  await api.delete(`/cohorts/saved/${id}/`)
+}
+
+export default api

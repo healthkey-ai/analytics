@@ -1,3 +1,19 @@
+export interface User {
+  uid: string
+  email: string
+  name: string
+  is_staff: boolean
+}
+
+export interface SavedCohort {
+  id: number
+  name: string
+  description: string
+  filters: CohortFilters
+  created_at: string
+  updated_at: string
+}
+
 export interface CohortFilters {
   disease?: string
   stage?: string[]

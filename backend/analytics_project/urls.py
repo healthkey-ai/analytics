@@ -10,6 +10,7 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    path("api/auth/", include("accounts.urls")),
     path("api/", include("cohorts.urls")),
     path("api/", include("metrics.urls")),
     path("swagger/", schema_view.with_ui("swagger"), name="swagger"),

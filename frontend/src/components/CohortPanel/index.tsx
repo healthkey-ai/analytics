@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { CohortFilters, FormSettings } from '../../types'
+import SaveCohortModal from './SaveCohortModal'
+import SavedCohortsList from './SavedCohortsList'
 
 interface Props {
   filters: CohortFilters
@@ -7,6 +9,10 @@ interface Props {
   onUpdate: <K extends keyof CohortFilters>(key: K, val: CohortFilters[K]) => void
   onClear: () => void
   cohortCount: number
+  onLoadCohort: (filters: CohortFilters, cohortId?: number, cohortName?: string) => void
+  activeCohortName: string | null
+  activeCohortId: number | null
+  cohortDirty: boolean
 }
 
 function Section({ title, children, defaultOpen = true }: {
@@ -83,7 +89,10 @@ function RangeInputs({ label, minKey, maxKey, filters, onUpdate, step = 1 }: {
   )
 }
 
-export default function CohortPanel({ filters, settings, onUpdate, onClear, cohortCount }: Props) {
+export default function CohortPanel({ filters, settings, onUpdate, onClear, cohortCount, onLoadCohort, activeCohortName, activeCohortId, cohortDirty }: Props) {
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [savedRefresh, setSavedRefresh] = useState(0)
+
   const sel = <K extends keyof CohortFilters>(key: K) => (filters[key] as string[] | undefined) ?? []
   const upd = <K extends keyof CohortFilters>(key: K) => (v: string[]) =>
     onUpdate(key, v.length ? v as never : undefined as never)
@@ -98,16 +107,38 @@ export default function CohortPanel({ filters, settings, onUpdate, onClear, coho
         <p className="text-xs text-slate-400 mt-0.5">Filter patients below</p>
       </div>
 
-      {/* Cohort badge */}
-      <div className="px-4 py-3 bg-slate-900/50 border-b border-slate-700 flex items-center justify-between">
-        <span className="text-sm text-slate-300">Patients selected</span>
-        <span className="bg-teal-500 text-white text-sm font-bold px-3 py-0.5 rounded-full">
-          {cohortCount.toLocaleString()}
-        </span>
+      {/* Active cohort indicator */}
+      {activeCohortName && (
+        <div className={`px-4 py-2 border-b flex items-center gap-2 ${cohortDirty ? 'bg-amber-900/30 border-amber-700/50' : 'bg-teal-900/40 border-teal-700/50'}`}>
+          <span className={`text-xs font-medium truncate ${cohortDirty ? 'text-amber-400' : 'text-teal-400'}`}>
+            {cohortDirty ? 'Modified:' : 'Active:'} {activeCohortName}
+          </span>
+        </div>
+      )}
+
+      {/* Cohort badge + save button */}
+      <div className="px-4 py-3 bg-slate-900/50 border-b border-slate-700 flex items-center justify-between gap-2">
+        <div>
+          <span className="text-sm text-slate-300">Patients selected</span>
+          <span className="ml-2 bg-teal-500 text-white text-sm font-bold px-3 py-0.5 rounded-full">
+            {cohortCount.toLocaleString()}
+          </span>
+        </div>
+        <button
+          onClick={() => setShowSaveModal(true)}
+          className="text-xs bg-teal-700 hover:bg-teal-600 text-white font-medium px-2.5 py-1 rounded transition-colors shrink-0"
+          title="Save current filters as a cohort"
+        >
+          Save
+        </button>
       </div>
 
       {/* Scrollable filters */}
       <div className="flex-1 overflow-y-auto">
+
+        <Section title="Saved Cohorts" defaultOpen={false}>
+          <SavedCohortsList onLoad={(f, id, name) => onLoadCohort(f, id, name)} refreshToken={savedRefresh} />
+        </Section>
 
         <Section title="Disease">
           <select
@@ -331,6 +362,16 @@ export default function CohortPanel({ filters, settings, onUpdate, onClear, coho
           Clear all filters
         </button>
       </div>
+
+      {showSaveModal && (
+        <SaveCohortModal
+          filters={filters}
+          activeCohortId={activeCohortId ?? undefined}
+          activeCohortName={activeCohortName ?? undefined}
+          onSaved={(cohort) => { setShowSaveModal(false); setSavedRefresh(r => r + 1); onLoadCohort(cohort.filters, cohort.id, cohort.name) }}
+          onClose={() => setShowSaveModal(false)}
+        />
+      )}
     </aside>
   )
 }
