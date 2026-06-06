@@ -14,9 +14,12 @@ ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,.onrender.c
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.staticfiles",
+    "django.contrib.auth",
+    "django.contrib.sessions",
     "rest_framework",
     "corsheaders",
     "drf_yasg",
+    "accounts",
     "patients",
     "cohorts",
     "metrics",
@@ -26,23 +29,36 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
 ]
 
 ROOT_URLCONF = "analytics_project.urls"
 WSGI_APPLICATION = "analytics_project.wsgi.application"
 
-_DEFAULT_DB_URL = (
-    "postgresql://ctomop_dev_user:IehVp8TGNcelOymGcjtfL6Up6W63DOf2"
-    "@dpg-d7pqr35ckfvc73bm0lc0-a.oregon-postgres.render.com/ctomop_dev"
-)
 DATABASES = {
     "default": dj_database_url.config(
-        default=os.environ.get("DATABASE_URL", _DEFAULT_DB_URL),
+        env="DATABASE_URL",
         conn_max_age=600,
         ssl_require=True,
     )
 }
+
+AUTH_USER_MODEL = "accounts.Identity"
+AUTHENTICATION_BACKENDS = ["accounts.backends.EmailBackend"]
+
+# Session config — shared with ctomop via same SECRET_KEY + DB
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
+SESSION_COOKIE_DOMAIN = os.environ.get("SESSION_COOKIE_DOMAIN")  # set to .healthkey.ai on Render
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_HTTPONLY = True
+
+CORS_ALLOW_CREDENTIALS = True
+
+if not DEBUG:
+    CSRF_COOKIE_SECURE = True
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
@@ -57,8 +73,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
-    "UNAUTHENTICATED_USER": None,
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
 }
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG
@@ -74,6 +91,11 @@ TEMPLATES = [
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
         "APP_DIRS": True,
-        "OPTIONS": {"context_processors": []},
+        "OPTIONS": {
+            "context_processors": [
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ]
+        },
     }
 ]
