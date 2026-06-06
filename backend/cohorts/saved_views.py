@@ -186,7 +186,7 @@ def saved_cohort_export(request, pk):
 
     fake_req = _FakeRequest(cohort.filters)
     qs = apply_cohort_filters(fake_req)
-    fmt = request.query_params.get("format", "csv")
+    fmt = request.query_params.get("file_format", "csv")
     safe_name = _safe_filename(cohort.name)
 
     if fmt == "json":

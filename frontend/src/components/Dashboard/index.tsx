@@ -85,7 +85,7 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
     }
     try {
       const resp = await api.get(
-        `/cohorts/saved/${activeSavedCohortId}/export/?format=${format}`,
+        `/cohorts/saved/${activeSavedCohortId}/export/?file_format=${format}`,
         { responseType: 'blob' }
       )
       const url = URL.createObjectURL(new Blob([resp.data]))
@@ -116,6 +116,37 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
           )}
         </div>
         <div className="flex items-center gap-3">
+          {/* User + logout */}
+          <span className="text-sm text-gray-500">{user.name || user.email}</span>
+          <button
+            onClick={onLogout}
+            className="text-sm text-gray-400 hover:text-red-500 transition-colors"
+            title="Sign out"
+          >
+            Sign out
+          </button>
+        </div>
+      </header>
+
+      {/* Tab bar */}
+      <div className="sticky top-[73px] z-10 bg-white border-b border-gray-200 px-6">
+        <div className="flex items-center justify-between max-w-[1400px] mx-auto">
+          <div className="flex">
+            {TABS.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setTab(id)}
+                className={`px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+                  tab === id
+                    ? 'border-teal-600 text-teal-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           {/* Export dropdown */}
           <div className="relative" ref={exportMenuRef}>
             <button
@@ -134,35 +165,6 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               </div>
             )}
           </div>
-
-          {/* User + logout */}
-          <span className="text-sm text-gray-500">{user.name || user.email}</span>
-          <button
-            onClick={onLogout}
-            className="text-sm text-gray-400 hover:text-red-500 transition-colors"
-            title="Sign out"
-          >
-            Sign out
-          </button>
-        </div>
-      </header>
-
-      {/* Tab bar */}
-      <div className="sticky top-[73px] z-10 bg-white border-b border-gray-200 px-6">
-        <div className="flex max-w-[1400px] mx-auto">
-          {TABS.map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={`px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
-                tab === id
-                  ? 'border-teal-600 text-teal-700'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
         </div>
       </div>
 

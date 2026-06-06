@@ -73,6 +73,11 @@ export async function createSavedCohort(payload: { name: string; description: st
   return data
 }
 
+export async function updateSavedCohort(id: number, payload: { name?: string; description?: string; filters?: CohortFilters }): Promise<SavedCohort> {
+  const { data } = await api.put<SavedCohort>(`/cohorts/saved/${id}/`, payload)
+  return data
+}
+
 export async function deleteSavedCohort(id: number): Promise<void> {
   await api.delete(`/cohorts/saved/${id}/`)
 }

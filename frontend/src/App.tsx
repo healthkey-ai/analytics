@@ -11,6 +11,7 @@ export default function App() {
   const { filters, settings, metrics, loading, updateFilter, clearFilters, setFilters } = useAnalytics()
   const [activeSavedCohortId, setActiveSavedCohortId] = useState<number | null>(null)
   const [activeCohortName, setActiveCohortName] = useState<string | null>(null)
+  const [cohortDirty, setCohortDirty] = useState(false)
 
   if (auth.loading) {
     return (
@@ -28,17 +29,18 @@ export default function App() {
     setFilters(f)
     setActiveSavedCohortId(cohortId ?? null)
     setActiveCohortName(cohortName ?? null)
+    setCohortDirty(false)
   }
 
   function handleUpdateFilter<K extends keyof CohortFilters>(key: K, val: CohortFilters[K]) {
-    setActiveCohortName(null)
-    setActiveSavedCohortId(null)
+    if (activeSavedCohortId !== null) setCohortDirty(true)
     updateFilter(key, val)
   }
 
   function handleClearFilters() {
-    setActiveCohortName(null)
     setActiveSavedCohortId(null)
+    setActiveCohortName(null)
+    setCohortDirty(false)
     clearFilters()
   }
 
@@ -52,6 +54,8 @@ export default function App() {
         cohortCount={metrics?.cohort.count ?? 0}
         onLoadCohort={handleLoadCohort}
         activeCohortName={activeCohortName}
+        activeCohortId={activeSavedCohortId}
+        cohortDirty={cohortDirty}
       />
       <main className="flex-1 overflow-y-auto">
         <Dashboard

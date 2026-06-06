@@ -11,6 +11,8 @@ interface Props {
   cohortCount: number
   onLoadCohort: (filters: CohortFilters, cohortId?: number, cohortName?: string) => void
   activeCohortName: string | null
+  activeCohortId: number | null
+  cohortDirty: boolean
 }
 
 function Section({ title, children, defaultOpen = true }: {
@@ -87,7 +89,7 @@ function RangeInputs({ label, minKey, maxKey, filters, onUpdate, step = 1 }: {
   )
 }
 
-export default function CohortPanel({ filters, settings, onUpdate, onClear, cohortCount, onLoadCohort, activeCohortName }: Props) {
+export default function CohortPanel({ filters, settings, onUpdate, onClear, cohortCount, onLoadCohort, activeCohortName, activeCohortId, cohortDirty }: Props) {
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [savedRefresh, setSavedRefresh] = useState(0)
 
@@ -107,9 +109,9 @@ export default function CohortPanel({ filters, settings, onUpdate, onClear, coho
 
       {/* Active cohort indicator */}
       {activeCohortName && (
-        <div className="px-4 py-2 bg-teal-900/40 border-b border-teal-700/50 flex items-center gap-2">
-          <span className="text-xs text-teal-400 font-medium truncate">
-            Active: {activeCohortName}
+        <div className={`px-4 py-2 border-b flex items-center gap-2 ${cohortDirty ? 'bg-amber-900/30 border-amber-700/50' : 'bg-teal-900/40 border-teal-700/50'}`}>
+          <span className={`text-xs font-medium truncate ${cohortDirty ? 'text-amber-400' : 'text-teal-400'}`}>
+            {cohortDirty ? 'Modified:' : 'Active:'} {activeCohortName}
           </span>
         </div>
       )}
@@ -364,6 +366,8 @@ export default function CohortPanel({ filters, settings, onUpdate, onClear, coho
       {showSaveModal && (
         <SaveCohortModal
           filters={filters}
+          activeCohortId={activeCohortId ?? undefined}
+          activeCohortName={activeCohortName ?? undefined}
           onSaved={(cohort) => { setShowSaveModal(false); setSavedRefresh(r => r + 1); onLoadCohort(cohort.filters, cohort.id, cohort.name) }}
           onClose={() => setShowSaveModal(false)}
         />
