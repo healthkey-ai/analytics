@@ -2,7 +2,7 @@ import csv
 import io
 import re
 
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -121,9 +121,24 @@ def _serialize_qs(qs):
     return rows
 
 
+def _csv_stream(qs):
+    """Yield CSV rows one at a time so we never hold the full dataset in memory."""
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=EXPORT_FIELDS, extrasaction="ignore")
+    writer.writeheader()
+    yield buf.getvalue()
+    for obj in qs.values(*EXPORT_FIELDS).iterator(chunk_size=2000):
+        buf.seek(0)
+        buf.truncate()
+        row = {k: v.isoformat() if hasattr(v, "isoformat") else v for k, v in obj.items()}
+        writer.writerow(row)
+        yield buf.getvalue()
+
+
 def _safe_filename(name: str) -> str:
     """Strip characters that could break Content-Disposition headers."""
-    return re.sub(r"[^\w\-. ]", "_", name).replace(" ", "_")[:64]
+    cleaned = re.sub(r"[^\w\-. ]", "_", name).replace(" ", "_")[:64]
+    return cleaned.encode("ascii", "replace").decode("ascii")
 
 
 @api_view(["GET", "POST"])
@@ -163,10 +178,15 @@ def saved_cohort_detail(request, pk):
 
     if request.method == "PUT":
         if "name" in request.data:
-            cohort.name = request.data["name"]
+            name = request.data["name"].strip() if isinstance(request.data["name"], str) else ""
+            if not name:
+                return Response({"detail": "name cannot be empty."}, status=status.HTTP_400_BAD_REQUEST)
+            cohort.name = name
         if "description" in request.data:
             cohort.description = request.data["description"]
         if "filters" in request.data:
+            if not isinstance(request.data["filters"], dict):
+                return Response({"detail": "filters must be a JSON object."}, status=status.HTTP_400_BAD_REQUEST)
             cohort.filters = request.data["filters"]
         cohort.save()
         return Response(_cohort_data(cohort))
@@ -193,16 +213,9 @@ def saved_cohort_export(request, pk):
         rows = _serialize_qs(qs[:MAX_EXPORT_ROWS])
         return JsonResponse(rows, safe=False)
 
-    # CSV
-    rows = _serialize_qs(qs[:MAX_EXPORT_ROWS])
-    buf = io.StringIO()
-    if rows:
-        writer = csv.DictWriter(buf, fieldnames=list(rows[0].keys()))
-        writer.writeheader()
-        writer.writerows(rows)
-
+    # CSV — stream row-by-row to avoid loading 50k rows into memory
     filename = f"cohort-{safe_name}.csv"
-    response = HttpResponse(buf.getvalue(), content_type="text/csv")
+    response = StreamingHttpResponse(_csv_stream(qs[:MAX_EXPORT_ROWS]), content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
 

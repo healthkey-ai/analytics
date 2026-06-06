@@ -25,6 +25,11 @@ CREATE TABLE IF NOT EXISTS identity (
     created_at  timestamptz   NOT NULL DEFAULT now(),
     CONSTRAINT identity_uid_key UNIQUE (uid)
 );
+-- Partial unique index so one email maps to at most one local account.
+-- CREATE INDEX IF NOT EXISTS is idempotent; safe to run against ctomop's table.
+CREATE UNIQUE INDEX IF NOT EXISTS identity_local_email_uidx
+    ON identity (lower(email))
+    WHERE issuer = 'urn:local';
 """
 
 CREATE_IDENTITY_GROUPS = """

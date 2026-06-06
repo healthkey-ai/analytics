@@ -183,7 +183,7 @@ class TestSavedCohortExport:
         mock_qs = _mock_export_qs(self._SAMPLE_ROWS)
         with patch("cohorts.saved_views.apply_cohort_filters", return_value=mock_qs):
             resp = api_client.get(export_url(cohort.pk, "csv"))
-        content = resp.content.decode()
+        content = b"".join(resp.streaming_content).decode()
         assert "id" in content
         assert "patient_age" in content
 

@@ -1,10 +1,12 @@
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import IntegrityError
 from django.middleware.csrf import get_token
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework import status
 
 from .models import Identity
@@ -12,12 +14,14 @@ from .models import Identity
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([AnonRateThrottle])
 def login_view(request):
     email = request.data.get("email", "")
     password = request.data.get("password", "")
     user = authenticate(request, username=email, password=password)
     if user is None:
         return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
+    request.session.cycle_key()
     login(request, user)
     get_token(request)  # ensure CSRF cookie is set on the response
     return Response(_user_data(user))
@@ -32,6 +36,7 @@ def logout_view(request):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([AnonRateThrottle])
 def signup_view(request):
     email = request.data.get("email", "").strip()
     password = request.data.get("password", "")
@@ -45,10 +50,11 @@ def signup_view(request):
     except DjangoValidationError as exc:
         return Response({"detail": " ".join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
 
-    if Identity.objects.filter(email__iexact=email, issuer="urn:local").exists():
+    try:
+        user = Identity.objects.create_user(email=email, password=password, name=name)
+    except IntegrityError:
         return Response({"detail": "An account with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
-
-    user = Identity.objects.create_user(email=email, password=password, name=name)
+    request.session.cycle_key()
     login(request, user, backend="accounts.backends.EmailBackend")
     get_token(request)  # ensure CSRF cookie is set on the response
     return Response(_user_data(user), status=status.HTTP_201_CREATED)
