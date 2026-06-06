@@ -24,6 +24,7 @@ class Migration(migrations.Migration):
                 (
                     "user",
                     models.ForeignKey(
+                        db_constraint=False,
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="saved_cohorts",
                         to=settings.AUTH_USER_MODEL,
@@ -33,5 +34,9 @@ class Migration(migrations.Migration):
             options={
                 "ordering": ["-created_at"],
             },
+        ),
+        migrations.AddIndex(
+            model_name="savedcohort",
+            index=models.Index(fields=["user", "-created_at"], name="cohort_user_created_idx"),
         ),
     ]

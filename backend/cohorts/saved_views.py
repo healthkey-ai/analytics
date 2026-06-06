@@ -13,16 +13,55 @@ from .filters import apply_cohort_filters
 from .models import SavedCohort
 
 
-# Fields excluded from export (PII)
-PII_FIELDS = {
-    "email", "phone_number", "date_of_birth", "postal_code",
-    "city", "facility_name", "person_id", "organization_id",
-}
-
-# All non-PII PatientInfo field names
+# Explicit allowlist of exportable fields — add new fields here intentionally.
+# PII fields (email, DOB, postal_code, etc.) are never included.
 EXPORT_FIELDS = [
-    f.name for f in PatientInfo._meta.get_fields()
-    if hasattr(f, "column") and f.name not in PII_FIELDS
+    "id",
+    # demographics
+    "patient_age", "gender", "race", "ethnicity", "country", "region",
+    "smoking_status",
+    # disease
+    "disease", "disease_slug", "stage", "diagnosis_date",
+    "condition_clinical_status",
+    # performance
+    "karnofsky_performance_score", "ecog_performance_status",
+    # comorbidities
+    "no_other_active_malignancies", "no_pre_existing_conditions",
+    "preexisting_conditions", "peripheral_neuropathy_grade",
+    # cytogenetics / molecular
+    "cytogenic_markers", "genetic_mutations", "tp53_disruption",
+    "stem_cell_transplant_history", "plasma_cell_leukemia",
+    # MM disease characteristics
+    "clonal_plasma_cells", "measurable_disease_imwg", "meets_crab",
+    "bone_lesions", "bone_imaging_result", "kappa_flc", "lambda_flc",
+    "monoclonal_protein_serum", "monoclonal_protein_urine",
+    # labs — CBC
+    "hemoglobin_g_dl", "platelet_count", "wbc_count_thousand_per_ul",
+    "anc_thousand_per_ul",
+    # labs — renal / electrolytes
+    "serum_creatinine_mg_dl", "egfr_ml_min_173m2", "serum_calcium_mg_dl",
+    # labs — liver / protein
+    "albumin_g_dl", "ast_u_l", "alt_u_l", "alkaline_phosphatase_u_l",
+    "bilirubin_total_mg_dl",
+    # labs — myeloma-specific
+    "beta2_microglobulin", "ldh_u_l",
+    # breast cancer specific
+    "estrogen_receptor_status", "progesterone_receptor_status",
+    "her2_status", "tnbc_status", "tumor_stage", "nodes_stage",
+    "distant_metastasis_stage",
+    # outcomes / follow-up
+    "mrd_status",
+    # treatment
+    "prior_therapy", "therapy_lines_count", "relapse_count",
+    "treatment_refractory_status",
+    "first_line_therapy", "first_line_start_date", "first_line_end_date",
+    "first_line_outcome", "first_line_intent", "first_line_discontinuation_reason",
+    "second_line_therapy", "second_line_start_date", "second_line_end_date",
+    "second_line_outcome", "second_line_intent",
+    "later_therapy", "later_start_date", "later_end_date",
+    "later_outcome", "later_intent", "later_therapies",
+    "supportive_therapies",
+    "created_at", "updated_at",
 ]
 
 MAX_EXPORT_ROWS = 50_000
