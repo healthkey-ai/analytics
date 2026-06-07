@@ -157,10 +157,24 @@ export interface MetricsResponse {
     pfs: SurvivalLine
     efs: SurvivalLine
   }
+  ttnt: {
+    line_1_to_2: SurvivalLine
+    line_2_to_3: SurvivalLine
+  }
+  switching: {
+    from_1l: SwitchingRow[]
+    from_2l: SwitchingRow[]
+  }
 }
 
 export interface SurvivalLine {
   curve: { time: number; survival: number; at_risk: number }[]
   n: number
   median: number | null
+}
+
+export interface SwitchingRow {
+  from_regimen: string
+  n_switched: number
+  switches: { to_regimen: string; n: number; pct: number }[]
 }

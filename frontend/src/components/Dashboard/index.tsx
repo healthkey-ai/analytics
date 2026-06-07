@@ -10,6 +10,8 @@ import LabsPanel from '../charts/LabsPanel'
 import TreatmentDuration from '../charts/TreatmentDuration'
 import Sequences from '../charts/Sequences'
 import SurvivalCurves from '../charts/SurvivalCurves'
+import TTNT from '../charts/TTNT'
+import Switching from '../charts/Switching'
 import api from '../../api/client'
 
 interface Props {
@@ -227,6 +229,16 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               </MetricCard>
               <MetricCard title="Top Treatment Sequences">
                 <Sequences sequences={metrics?.treatment_patterns?.sequences ?? []} />
+              </MetricCard>
+            </div>
+
+            {/* TTNT + Switching */}
+            <div className="grid grid-cols-2 gap-6">
+              <MetricCard title="Time to Next Treatment (TTNT)">
+                {metrics?.ttnt ? <TTNT data={metrics.ttnt} /> : <NoDataPlaceholder />}
+              </MetricCard>
+              <MetricCard title="Treatment Switching Patterns">
+                {metrics?.switching ? <Switching data={metrics.switching} /> : <NoDataPlaceholder />}
               </MetricCard>
             </div>
           </>

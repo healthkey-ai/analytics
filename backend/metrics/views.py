@@ -11,6 +11,8 @@ from metrics.services import (
     labs,
     treatment_duration,
     survival,
+    ttnt,
+    switching,
 )
 
 
@@ -32,4 +34,6 @@ def metrics(request):
         "labs":                labs.compute(qs),
         "treatment_duration":  treatment_duration.compute(qs),
         "survival":            survival.compute(qs),
+        "ttnt":                ttnt.compute(qs),
+        "switching":           switching.compute(qs),
     })
