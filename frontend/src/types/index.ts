@@ -157,11 +157,11 @@ export interface MetricsResponse {
     pfs: SurvivalLine
     efs: SurvivalLine
   }
-  ttnt: {
+  ttnt?: {
     line_1_to_2: SurvivalLine
     line_2_to_3: SurvivalLine
   }
-  switching: {
+  switching?: {
     from_1l: SwitchingRow[]
     from_2l: SwitchingRow[]
   }

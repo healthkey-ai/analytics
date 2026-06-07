@@ -1,14 +1,13 @@
-from metrics.services.survival import _km_curve, _median
+from metrics.services.km_utils import km_curve, km_median, km_result
 
 
-def _ttnt_km(qs, end_f, next_start_f, censor_f):
+def _ttnt_km(qs, end_f, next_start_f):
     """
     TTNT Kaplan-Meier for one line transition.
-      end_f       – field: end of current line
+      end_f        – field: end of current line
       next_start_f – field: start of next line (event if present)
-      censor_f    – field: last known alive date (death_date or last_treatment)
     Event = patient started the next therapy line.
-    Censored = no next line recorded; time = censor_f - end_f.
+    Censored = no next line; time = (death_date or last_treatment) - end_f.
     """
     rows = qs.values(end_f, next_start_f, "death_date", "last_treatment")
     times_events = []
@@ -30,8 +29,7 @@ def _ttnt_km(qs, end_f, next_start_f, censor_f):
             continue
         times_events.append((duration, event))
 
-    curve = _km_curve(times_events)
-    return {"curve": curve, "n": len(times_events), "median": _median(curve)}
+    return km_result(times_events)
 
 
 def compute(qs):
@@ -44,12 +42,10 @@ def compute(qs):
             qs1,
             end_f="first_line_end_date",
             next_start_f="second_line_start_date",
-            censor_f="last_treatment",
         ),
         "line_2_to_3": _ttnt_km(
             qs2,
             end_f="second_line_end_date",
             next_start_f="later_start_date",
-            censor_f="last_treatment",
         ),
     }

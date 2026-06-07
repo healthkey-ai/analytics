@@ -104,7 +104,6 @@ export default function TTNT({ data }: Props) {
                 stroke={color}
                 strokeWidth={2}
                 dot={false}
-                connectNulls
               />
             ) : null
           )}

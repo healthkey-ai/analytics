@@ -5,12 +5,12 @@ interface Props {
   data: MetricsResponse['switching']
 }
 
-// Stable color palette for up to 12 destination regimens
 const COLORS = [
   '#0d9488', '#2563eb', '#d97706', '#7c3aed', '#dc2626',
   '#059669', '#db2777', '#ea580c', '#0891b2', '#65a30d',
-  '#9333ea', '#6b7280',
+  '#9333ea',
 ]
+const OTHER_COLOR = '#6b7280'
 
 type LineKey = 'from_1l' | 'from_2l'
 
@@ -36,10 +36,13 @@ export default function Switching({ data }: Props) {
     .sort((a, b) => b[1] - a[1])
     .map(([reg]) => reg)
 
-  const colorMap: Record<string, string> = {}
-  allDests.forEach((reg, i) => { colorMap[reg] = COLORS[i % COLORS.length] })
+  const namedDests = allDests.slice(0, COLORS.length)
+  const hasOther = allDests.length > COLORS.length
 
-  // Shorten long regimen names for display
+  const colorMap: Record<string, string> = {}
+  namedDests.forEach((reg, i) => { colorMap[reg] = COLORS[i] })
+
+  // Strip parenthetical dose notes and " Monotherapy" suffix — assumes current regimen naming conventions
   const shorten = (name: string) =>
     name.replace(/ \(.*?\)/g, '').replace(' Monotherapy', '').trim()
 
@@ -74,7 +77,7 @@ export default function Switching({ data }: Props) {
               {row.switches.map(s => (
                 <div
                   key={s.to_regimen}
-                  style={{ width: `${s.pct}%`, backgroundColor: colorMap[s.to_regimen] }}
+                  style={{ width: `${s.pct}%`, backgroundColor: colorMap[s.to_regimen] ?? OTHER_COLOR }}
                   title={`${shorten(s.to_regimen)}: ${s.n} patients (${s.pct}%)`}
                   className="flex items-center justify-center overflow-hidden"
                 >
@@ -92,12 +95,18 @@ export default function Switching({ data }: Props) {
 
       {/* Legend */}
       <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1">
-        {allDests.map(reg => (
+        {namedDests.map(reg => (
           <div key={reg} className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: colorMap[reg] }} />
             <span className="text-[11px] text-gray-500">{shorten(reg)}</span>
           </div>
         ))}
+        {hasOther && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: OTHER_COLOR }} />
+            <span className="text-[11px] text-gray-500">Other</span>
+          </div>
+        )}
       </div>
 
       <p className="text-xs text-gray-400 mt-3">
