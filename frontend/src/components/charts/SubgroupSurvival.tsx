@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   LineChart,
   Line,
@@ -8,7 +8,8 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts'
-import type { MetricsResponse, SubgroupSurvivalLine } from '../../types'
+import type { MetricsResponse } from '../../types'
+import { mergeKMCurves } from '../../utils/kmChartUtils'
 
 interface Props {
   data: NonNullable<MetricsResponse['subgroup_survival']>
@@ -30,21 +31,6 @@ const OUTCOME_CONFIG: { key: OutcomeKey; label: string }[] = [
 
 const COLORS = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed']
 
-function mergeKMCurves(lines: SubgroupSurvivalLine[]) {
-  const allTimes = [
-    ...new Set(lines.flatMap((l) => l.curve.map((p) => p.time))),
-  ].sort((a, b) => a - b)
-
-  return allTimes.map((time) => {
-    const point: Record<string, number> = { time }
-    lines.forEach((line, i) => {
-      const last = [...line.curve].reverse().find((p) => p.time <= time)
-      point[`g${i}`] = last ? last.survival : 1.0
-    })
-    return point
-  })
-}
-
 export default function SubgroupSurvival({ data }: Props) {
   const [strat,   setStrat]   = useState<StratKey>('by_stage')
   const [outcome, setOutcome] = useState<OutcomeKey>('os')
@@ -64,7 +50,10 @@ export default function SubgroupSurvival({ data }: Props) {
     )
   }
 
-  const chartData = mergeKMCurves(lines)
+  const chartData = useMemo(
+    () => mergeKMCurves(lines.map((l, i) => ({ key: `g${i}`, curve: l.curve }))),
+    [lines]
+  )
 
   return (
     <div>

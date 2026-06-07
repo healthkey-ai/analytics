@@ -12,10 +12,11 @@ def km_curve(times_events):
 
     buckets = defaultdict(lambda: {"d": 0, "c": 0})
     for t, event in times_events:
+        t_key = round(t, 1)  # bucket at display precision so same-month events merge
         if event:
-            buckets[t]["d"] += 1
+            buckets[t_key]["d"] += 1
         else:
-            buckets[t]["c"] += 1
+            buckets[t_key]["c"] += 1
 
     n        = len(times_events)
     at_risk  = n
@@ -25,12 +26,12 @@ def km_curve(times_events):
     for t in sorted(buckets):
         d = buckets[t]["d"]
         c = buckets[t]["c"]
-        if d > 0:
+        if d > 0 and at_risk > 0:
             survival *= 1 - d / at_risk
             result.append({
-                "time":     round(t, 1),
+                "time":     t,
                 "survival": round(survival, 4),
-                "at_risk":  at_risk - d,
+                "at_risk":  at_risk,  # at_risk before events, per KM convention
             })
         at_risk -= d + c
 

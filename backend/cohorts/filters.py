@@ -1,5 +1,6 @@
 from django.db.models import Q
 from patients.models import PatientInfo
+from metrics.services.clinical_filters import HIGH_RISK_CYTO, HAS_SCT, NO_SCT
 
 
 def apply_cohort_filters(request) -> "QuerySet[PatientInfo]":
@@ -90,17 +91,9 @@ def apply_cohort_filters(request) -> "QuerySet[PatientInfo]":
 
     high_risk = _bool("high_risk_cytogenetics")
     if high_risk is True:
-        qs = qs.filter(
-            Q(cytogenic_markers__icontains="del(17p)") |
-            Q(cytogenic_markers__icontains="t(4;14)") |
-            Q(cytogenic_markers__icontains="t(14;16)")
-        )
+        qs = qs.filter(HIGH_RISK_CYTO)
     elif high_risk is False:
-        qs = qs.exclude(
-            Q(cytogenic_markers__icontains="del(17p)") |
-            Q(cytogenic_markers__icontains="t(4;14)") |
-            Q(cytogenic_markers__icontains="t(14;16)")
-        )
+        qs = qs.exclude(HIGH_RISK_CYTO)
 
     tp53 = _bool("tp53_disruption")
     if tp53 is not None:
@@ -158,9 +151,9 @@ def apply_cohort_filters(request) -> "QuerySet[PatientInfo]":
 
     has_sct = _bool("has_sct")
     if has_sct is True:
-        qs = qs.exclude(stem_cell_transplant_history=[]).exclude(stem_cell_transplant_history__isnull=True)
+        qs = qs.filter(HAS_SCT)
     elif has_sct is False:
-        qs = qs.filter(Q(stem_cell_transplant_history=[]) | Q(stem_cell_transplant_history__isnull=True))
+        qs = qs.filter(NO_SCT)
 
     pcl = _bool("plasma_cell_leukemia")
     if pcl is not None:

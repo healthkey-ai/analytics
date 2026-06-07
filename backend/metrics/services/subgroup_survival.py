@@ -1,21 +1,5 @@
-from django.db.models import Q
 from metrics.services.survival import os_km, pfs_km
-
-HIGH_RISK_CYTO = (
-    Q(cytogenic_markers__icontains='del(17p)') |
-    Q(cytogenic_markers__icontains='t(4;14)') |
-    Q(cytogenic_markers__icontains='t(14;16)')
-)
-
-HAS_SCT = (
-    ~Q(stem_cell_transplant_history__isnull=True) &
-    ~Q(stem_cell_transplant_history=[])
-)
-
-NO_SCT = (
-    Q(stem_cell_transplant_history__isnull=True) |
-    Q(stem_cell_transplant_history=[])
-)
+from metrics.services.clinical_filters import HIGH_RISK_CYTO, HAS_SCT, NO_SCT
 
 
 def _subgroup_km(km_fn, subgroups):
@@ -42,9 +26,11 @@ def _stage_subgroups(qs):
 
 
 def _cyto_subgroups(qs):
+    # Exclude patients with no cytogenetics workup — they are unevaluable, not Standard Risk
+    tested = qs.exclude(cytogenic_markers__isnull=True).exclude(cytogenic_markers="")
     return [
-        ("High Risk",     qs.filter(HIGH_RISK_CYTO)),
-        ("Standard Risk", qs.exclude(HIGH_RISK_CYTO)),
+        ("High Risk",     tested.filter(HIGH_RISK_CYTO)),
+        ("Standard Risk", tested.exclude(HIGH_RISK_CYTO)),
     ]
 
 
@@ -57,6 +43,9 @@ def _sct_subgroups(qs):
 
 def _stratify(qs, subgroups_fn):
     subs = subgroups_fn(qs)
+    # Note: fires 2 DB queries per subgroup (os_km + pfs_km each call .values()).
+    # For stage: 1 (distinct) + N×2 queries. Acceptable at typical cohort sizes (~5 stages).
+    # If latency becomes a concern, fetch all rows in 2 queries and partition in Python.
     return {
         "os":  _subgroup_km(os_km,  subs),
         "pfs": _subgroup_km(pfs_km, subs),

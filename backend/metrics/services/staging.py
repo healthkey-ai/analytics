@@ -1,4 +1,5 @@
 from django.db.models import Count, Q
+from metrics.services.clinical_filters import HIGH_RISK_CYTO, HAS_SCT
 
 
 def compute(qs):
@@ -27,11 +28,6 @@ def compute(qs):
              "pct": pct(r['count'])} for r in ecog_rows]
 
     # All scalar counts in one aggregate() call — replaces 8 separate .count() queries
-    HIGH_RISK = (
-        Q(cytogenic_markers__icontains='del(17p)') |
-        Q(cytogenic_markers__icontains='t(4;14)') |
-        Q(cytogenic_markers__icontains='t(14;16)')
-    )
     agg = qs.aggregate(
         crab_met=Count('id',    filter=Q(meets_crab=True)),
         crab_not=Count('id',    filter=Q(meets_crab=False)),
@@ -40,8 +36,8 @@ def compute(qs):
         t1416=Count('id',       filter=Q(cytogenic_markers__icontains='t(14;16)')),
         q121=Count('id',        filter=Q(cytogenic_markers__icontains='1q21')),
         hyperdiploid=Count('id',filter=Q(cytogenic_markers__icontains='hyperdiploidy')),
-        std_risk=Count('id',    filter=~HIGH_RISK & (Q(cytogenic_markers='') | Q(cytogenic_markers__isnull=True))),
-        sct_count=Count('id',   filter=~Q(stem_cell_transplant_history__isnull=True) & ~Q(stem_cell_transplant_history=[])),
+        std_risk=Count('id',    filter=~HIGH_RISK_CYTO & (Q(cytogenic_markers='') | Q(cytogenic_markers__isnull=True))),
+        sct_count=Count('id',   filter=HAS_SCT),
     )
 
     crab_met = agg['crab_met']
