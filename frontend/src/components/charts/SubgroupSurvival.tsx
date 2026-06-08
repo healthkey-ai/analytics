@@ -10,6 +10,7 @@ import {
 } from 'recharts'
 import type { MetricsResponse } from '../../types'
 import { mergeKMCurves } from '../../utils/kmChartUtils'
+import LandmarkTable from './LandmarkTable'
 
 interface Props {
   data: NonNullable<MetricsResponse['subgroup_survival']>
@@ -32,11 +33,22 @@ const OUTCOME_CONFIG: { key: OutcomeKey; label: string }[] = [
 
 const COLORS = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed']
 
+function PValueBadge({ p }: { p: number | null | undefined }) {
+  if (p == null) return null
+  const label = p < 0.001 ? 'p < 0.001' : p < 0.05 ? `p = ${p.toFixed(3)}` : `p = ${p.toFixed(2)}`
+  return (
+    <span className="inline-flex items-center rounded-full bg-gray-100 border border-gray-200 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+      {label}
+    </span>
+  )
+}
+
 export default function SubgroupSurvival({ data }: Props) {
   const [strat,   setStrat]   = useState<StratKey>('by_stage')
   const [outcome, setOutcome] = useState<OutcomeKey>('os')
 
   const lines = data[strat][outcome]
+  const pValue = outcome === 'os' ? data[strat].os_p : data[strat].pfs_p
 
   const toggleClass = (active: boolean) =>
     `px-4 py-1.5 text-xs rounded-md font-semibold transition-colors ${
@@ -76,20 +88,23 @@ export default function SubgroupSurvival({ data }: Props) {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-6 mb-4">
-        {lines.map((line, i) => (
-          <div key={line.label} className="flex items-center gap-2">
-            <span className="inline-block w-8 h-0.5" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-            <span className="text-xs text-gray-600">
-              <span className="font-semibold">{line.label}</span>
-              {' · n='}{line.n}
-              {line.median != null
-                ? ` · median ${line.median.toFixed(1)} mo`
-                : ' · median NR'}
-            </span>
-          </div>
-        ))}
+      {/* Legend + p-value badge */}
+      <div className="flex flex-wrap items-center gap-4 mb-4">
+        <div className="flex flex-wrap gap-6">
+          {lines.map((line, i) => (
+            <div key={line.label} className="flex items-center gap-2">
+              <span className="inline-block w-8 h-0.5" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+              <span className="text-xs text-gray-600">
+                <span className="font-semibold">{line.label}</span>
+                {' · n='}{line.n}
+                {line.median != null
+                  ? ` · median ${line.median.toFixed(1)} mo`
+                  : ' · median NR'}
+              </span>
+            </div>
+          ))}
+        </div>
+        <PValueBadge p={pValue} />
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
@@ -110,8 +125,10 @@ export default function SubgroupSurvival({ data }: Props) {
           <Tooltip
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             formatter={((v: unknown, name: unknown) => {
-              const idx = Number(String(name).replace('g', ''))
-              const label = lines[idx]?.label ?? String(name)
+              const nameStr = String(name)
+              if (nameStr.endsWith('_lower') || nameStr.endsWith('_upper')) return null
+              const idx = Number(nameStr.replace('g', ''))
+              const label = lines[idx]?.label ?? nameStr
               return [`${(Number(v) * 100).toFixed(1)}%`, label]
             }) as any}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -130,14 +147,43 @@ export default function SubgroupSurvival({ data }: Props) {
               dot={false}
             />
           ))}
+          {/* CI bands — dashed, low opacity, excluded from legend/tooltip */}
+          {lines.map((line, i) => [
+            <Line
+              key={`${line.label}_lower`}
+              type="stepAfter"
+              dataKey={`g${i}_lower`}
+              name={`g${i}_lower`}
+              stroke={COLORS[i % COLORS.length]}
+              strokeWidth={1}
+              strokeOpacity={0.3}
+              strokeDasharray="3 3"
+              dot={false}
+              legendType="none"
+            />,
+            <Line
+              key={`${line.label}_upper`}
+              type="stepAfter"
+              dataKey={`g${i}_upper`}
+              name={`g${i}_upper`}
+              stroke={COLORS[i % COLORS.length]}
+              strokeWidth={1}
+              strokeOpacity={0.3}
+              strokeDasharray="3 3"
+              dot={false}
+              legendType="none"
+            />,
+          ])}
         </LineChart>
       </ResponsiveContainer>
 
       <p className="text-xs text-gray-400 mt-2">
         <span className="font-medium">OS</span>: 1L start → death. &nbsp;
         <span className="font-medium">PFS</span>: 1L start → first progression (any line) or death. &nbsp;
-        Patients without an event are censored at last known contact. Dashed line = 50%.
+        Patients without an event are censored at last known contact. Dashed line = 50%. Shaded bands = 95% CI.
       </p>
+
+      <LandmarkTable lines={lines} />
     </div>
   )
 }

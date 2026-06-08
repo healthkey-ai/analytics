@@ -231,3 +231,30 @@ def test_by_mrd_in_compute_output():
     assert "by_mrd" in result
     assert "os"  in result["by_mrd"]
     assert "pfs" in result["by_mrd"]
+
+
+# ---------------------------------------------------------------------------
+# p-value fields (Feature 1 — log-rank)
+# ---------------------------------------------------------------------------
+
+def test_stratification_has_p_value_fields():
+    qs = _make_stage_qs(["ISS Stage I", "ISS Stage II"])
+    result = compute(qs)
+
+    for strat in ("by_stage", "by_cytogenetics", "by_sct", "by_mrd"):
+        assert "os_p"  in result[strat], f"{strat} missing 'os_p'"
+        assert "pfs_p" in result[strat], f"{strat} missing 'pfs_p'"
+
+
+def test_p_value_none_for_single_subgroup():
+    """Only one stage present → log-rank requires ≥ 2 groups → os_p must be None."""
+    qs = _make_stage_qs(["ISS Stage I"])
+    result = compute(qs)
+    assert result["by_stage"]["os_p"] is None
+
+
+def test_p_value_is_float_or_none():
+    qs = _make_stage_qs(["ISS Stage I", "ISS Stage II"])
+    result = compute(qs)
+    p = result["by_stage"]["os_p"]
+    assert p is None or (isinstance(p, float) and 0.0 <= p <= 1.0)

@@ -1,12 +1,13 @@
-from metrics.services.km_utils import km_curve as _km_curve, km_median as _median, km_result as _km_result
+from metrics.services.km_utils import km_result as _km_result
 
 
 # ── OS ────────────────────────────────────────────────────────────────────────
 
-def os_km(qs):
+def _os_times_events(qs):
     """
     OS: from 1st-line start to death_date.
     Censored at last_treatment if still alive.
+    Returns raw [(duration_months, event)] list.
     """
     rows = qs.values("first_line_start_date", "death_date", "last_treatment")
     times_events = []
@@ -24,16 +25,21 @@ def os_km(qs):
         if duration <= 0:
             continue
         times_events.append((duration, event))
-    return _km_result(times_events)
+    return times_events
+
+
+def os_km(qs):
+    return _km_result(_os_times_events(qs))
 
 
 # ── PFS ───────────────────────────────────────────────────────────────────────
 
-def pfs_km(qs):
+def _pfs_times_events(qs):
     """
     PFS: from 1st-line start to first documented Progressive Disease across any
     therapy line, or death — whichever comes first.
     Censored at last_treatment if no progression/death recorded.
+    Returns raw [(duration_months, event)] list.
     """
     rows = qs.values(
         "first_line_start_date",
@@ -73,7 +79,11 @@ def pfs_km(qs):
         if duration <= 0:
             continue
         times_events.append((duration, event))
-    return _km_result(times_events)
+    return times_events
+
+
+def pfs_km(qs):
+    return _km_result(_pfs_times_events(qs))
 
 
 # ── EFS ───────────────────────────────────────────────────────────────────────

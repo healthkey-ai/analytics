@@ -1,4 +1,5 @@
-from metrics.services.survival import os_km, pfs_km
+from metrics.services.survival import _os_times_events, _pfs_times_events
+from metrics.services.km_utils import km_result, log_rank_p
 from metrics.services.clinical_filters import HIGH_RISK_CYTO, HAS_SCT, NO_SCT
 
 
@@ -63,12 +64,33 @@ def _mrd_subgroups(qs):
 
 def _stratify(qs, subgroups_fn):
     subs = subgroups_fn(qs)
-    # Note: fires 2 DB queries per subgroup (os_km + pfs_km each call .values()).
-    # For stage: 1 (distinct) + N×2 queries. Acceptable at typical cohort sizes (~5 stages).
-    # If latency becomes a concern, fetch all rows in 2 queries and partition in Python.
+
+    os_lines      = []
+    pfs_lines     = []
+    os_te_groups  = []
+    pfs_te_groups = []
+
+    for label, sub_qs in subs:
+        os_te  = _os_times_events(sub_qs)
+        pfs_te = _pfs_times_events(sub_qs)
+
+        if os_te:
+            os_km_r = km_result(os_te)
+            if os_km_r["n"] > 0:
+                os_lines.append({"label": label, **os_km_r})
+                os_te_groups.append(os_te)
+
+        if pfs_te:
+            pfs_km_r = km_result(pfs_te)
+            if pfs_km_r["n"] > 0:
+                pfs_lines.append({"label": label, **pfs_km_r})
+                pfs_te_groups.append(pfs_te)
+
     return {
-        "os":  _subgroup_km(os_km,  subs),
-        "pfs": _subgroup_km(pfs_km, subs),
+        "os":    os_lines,
+        "pfs":   pfs_lines,
+        "os_p":  log_rank_p(os_te_groups),
+        "pfs_p": log_rank_p(pfs_te_groups),
     }
 
 
