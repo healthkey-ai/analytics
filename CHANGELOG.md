@@ -9,6 +9,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.0] — 2026-07-04
+
+### Summary
+
+Initial tagged release submitted to the Journal of Open Source Software (JOSS).
+
+### Features included in this release
+
+- **Cohort Builder** — 20+ clinical filter dimensions (disease, ISS stage, ECOG, cytogenetics, lines of therapy, regimens, refractory status, MM-specific criteria, lab ranges, diagnosis year) composing via a single `apply_cohort_filters` function.
+- **KM Survival Analysis** — Overall Survival (OS), Progression-Free Survival (PFS), and Event-Free Survival (EFS) with 95% Greenwood confidence bands and log-rank p-values via SciPy.
+- **Subgroup Survival** — OS/PFS Kaplan-Meier stratified by ISS stage, cytogenetic risk group (High Risk / Standard Risk), SCT status, and MRD status, with landmark survival tables at 6/12/24/36 months.
+- **Time to Next Treatment (TTNT)** — KM curves for line 1→2 and line 2→3 transitions.
+- **Duration of Response (DOR)** — KM chart for confirmed responders (CR/sCR/VGPR/PR/MR) per IMWG criteria in 1st- and 2nd-line therapy.
+- **Treatment Analytics** — Response rate stacked bar charts (CR/VGPR/PR/MR/SD/PD), treatment switching Sankey diagrams, top treatment sequence paths, and treatment duration box plots.
+- **Demographics and Staging** — ISS stage, ECOG, cytogenetic marker prevalence, CRAB criteria, age buckets, gender, race, and geographic distribution panels. Laboratory value box plots for nine key analytes.
+- **Authentication and Org-Scoped Access** — Email/password login; organization-based data scoping; role-based access control.
+- **Saved Cohorts and Export** — Save, load, update, and delete named cohort filter sets (max 10 per user); patient-level CSV/JSON export with PII fields excluded and per-user ownership enforced.
+- **Backend test suite** — ~2,400 lines across 19 pytest files covering KM correctness, log-rank p-values, cohort filter composition, org-scoped queryset logic, and authentication flows.
+- **Deployment** — Single-command deploy to Render (backend + frontend static); GitHub Actions CI on every push.
+
+---
+
 ## 2026-06-08 — KM Enhancements (PR #9)
 
 ### Added

@@ -11,10 +11,10 @@ tags:
   - Kaplan-Meier
 authors:
   - name: Adam Blum
-    orcid: 0000-0000-0000-0000  # TODO: replace with your ORCID (https://orcid.org)
+    orcid: 0009-0009-4985-7615
     affiliation: 1
 affiliations:
-  - name: HealthKey AI  # TODO: verify legal entity name
+  - name: HealthKey AI
     index: 1
 date: 4 July 2026
 bibliography: paper.bib
