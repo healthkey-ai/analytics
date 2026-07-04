@@ -1,4 +1,8 @@
-# Analytics Platform
+# Prism
+
+[![Tests](https://github.com/healthkey-ai/prism/actions/workflows/test.yml/badge.svg)](https://github.com/healthkey-ai/prism/actions/workflows/test.yml)
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.XXXXX/status.svg)](https://doi.org/10.21105/joss.XXXXX)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Real-world evidence analytics for oncology patient cohorts, built on top of [CTOMOP](https://github.com/healthkey-ai/ctomop) (OMOP CDM v6.0).
 
@@ -10,7 +14,7 @@ Select a patient cohort using 20+ clinical criteria, then instantly explore outc
 
 ### Cohort Builder
 Filter patients by:
-- Disease (Multiple Myeloma, Breast Cancer)
+- Disease (Multiple Myeloma, Breast Cancer, Follicular Lymphoma)
 - ISS stage, ECOG performance status
 - Age range, gender, ethnicity, geographic region
 - Cytogenetic markers (del17p, t(4;14), t(14;16), high-risk flag, TP53 disruption)
@@ -130,3 +134,9 @@ gunicorn analytics_project.wsgi:application --bind 0.0.0.0:$PORT
 ## Database
 
 The backend connects to a CTOMOP PostgreSQL instance and reads from the `patient_info` denormalized view via an unmanaged Django model. Connection settings live in `backend/analytics_project/settings.py`.
+
+## Citing Prism
+
+If you use Prism in research, please cite:
+
+> Blum, A. (2026). Prism: An Open-Source Real-World Evidence Analytics Platform for Oncology Patient Cohorts. *Journal of Open Source Software*. https://doi.org/10.21105/joss.XXXXX
