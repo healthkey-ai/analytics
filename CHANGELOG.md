@@ -5,6 +5,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.1] — 2026-07-05
+
+### Fixed
+- Django migration `0004_remove_userprofile` now includes `granted_at = NOW()` in the `group_access` INSERT. The production PROMOP database has a `NOT NULL` constraint on that column which the dev database lacks, causing deploys against the production schema to fail with an integrity error.
+
+---
+
 ## [Unreleased]
 
 ### Planned

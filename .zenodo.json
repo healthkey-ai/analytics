@@ -8,7 +8,7 @@
     }
   ],
   "title": "PRism: Real-world evidence analytics for oncology patient cohorts",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "upload_type": "software",
   "license": "apache-2.0",
   "access_right": "open",
