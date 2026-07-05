@@ -3,6 +3,7 @@ message: "If you use this software, please cite it using the metadata from this 
 title: "PRism: Real-world evidence analytics for oncology patient cohorts"
 version: 1.0.1
 date-released: 2026-07-05
+doi: 10.5281/zenodo.21204681
 type: software
 license: Apache-2.0
 url: "https://github.com/healthkey-ai/prism"
