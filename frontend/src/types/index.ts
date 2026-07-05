@@ -3,7 +3,8 @@ export interface User {
   email: string
   name: string
   is_staff: boolean
-  role: 'user' | 'premium' | 'staff'
+  is_premium: boolean
+  role: 'user' | 'staff'
   organization: string
 }
 

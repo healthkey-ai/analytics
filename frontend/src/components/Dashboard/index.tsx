@@ -57,7 +57,7 @@ function NoDataPlaceholder() {
 }
 
 export default function Dashboard({ metrics, loading, disease, user, onLogout, activeSavedCohortId }: Props) {
-  const canExport = (user.role ?? 'user') === 'premium' || (user.role ?? 'user') === 'staff'
+  const canExport = user.is_premium === true || user.is_staff === true
   const isMultipleMyeloma = disease === 'Multiple Myeloma'
   const [tab, setTab]                 = useState<DashboardTab>('outcomes')
   const [responseTab, setResponseTab] = useState<ResponseLineTab>('1L')

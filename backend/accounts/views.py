@@ -122,6 +122,7 @@ def _user_data(user):
         "email":        user.email,
         "name":         user.name,
         "is_staff":     user.is_staff,
+        "is_premium":   getattr(user, 'is_premium', False),
         "role":         role,
         "organization": organization,
     }

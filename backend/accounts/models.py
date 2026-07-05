@@ -54,6 +54,7 @@ class Identity(AbstractBaseUser, PermissionsMixin):
     name = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    is_premium = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = IdentityManager()
@@ -96,12 +97,10 @@ class UserProfile(models.Model):
     db_constraint=False because the identity table is unmanaged (no FK constraint in DB).
     """
     ROLE_USER    = "user"
-    ROLE_PREMIUM = "premium"
     ROLE_STAFF   = "staff"
     ROLE_CHOICES = [
-        (ROLE_USER,    "User"),
-        (ROLE_PREMIUM, "Premium"),
-        (ROLE_STAFF,   "Staff"),
+        (ROLE_USER,  "User"),
+        (ROLE_STAFF, "Staff"),
     ]
 
     user = models.OneToOneField(

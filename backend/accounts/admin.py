@@ -33,11 +33,6 @@ class UserProfileAdmin(admin.ModelAdmin):
     user_name.short_description = "Name"
     user_name.admin_order_field = "user__name"
 
-    @admin.action(description="Grant Premium role")
-    def grant_premium(self, request, queryset):
-        updated = queryset.update(role=UserProfile.ROLE_PREMIUM)
-        self.message_user(request, f"Granted Premium to {updated} user(s).")
-
     @admin.action(description="Grant Staff role")
     def grant_staff(self, request, queryset):
         updated = queryset.update(role=UserProfile.ROLE_STAFF)
@@ -48,18 +43,18 @@ class UserProfileAdmin(admin.ModelAdmin):
         updated = queryset.update(role=UserProfile.ROLE_USER)
         self.message_user(request, f"Revoked {updated} user(s) to User role.")
 
-    actions = ["grant_premium", "grant_staff", "revoke_to_user"]
+    actions = ["grant_staff", "revoke_to_user"]
 
 
 @admin.register(Identity)
 class IdentityAdmin(admin.ModelAdmin):
-    """Read-only view of all identities — use UserProfile admin to manage roles/orgs."""
-    list_display  = ["email", "name", "is_staff", "is_active", "created_at"]
+    """Read-only view of identities — Premium is managed in PRomop's admin."""
+    list_display  = ["email", "name", "is_premium", "is_staff", "is_active", "created_at"]
     search_fields = ["email", "name", "uid"]
-    list_filter   = ["is_staff", "is_active"]
+    list_filter   = ["is_staff", "is_active", "is_premium"]
     ordering      = ["email"]
-    readonly_fields = ["uid", "issuer", "sub", "email", "name", "created_at",
-                       "last_login", "is_active", "is_staff", "is_superuser"]
+    readonly_fields = ["uid", "issuer", "sub", "email", "name", "is_premium",
+                       "created_at", "last_login", "is_active", "is_staff", "is_superuser"]
 
     def has_add_permission(self, request):
         return False
