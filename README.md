@@ -4,7 +4,7 @@
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.XXXXX/status.svg)](https://doi.org/10.21105/joss.XXXXX)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-Real-world evidence analytics for oncology patient cohorts, built on top of [PROMOP](https://github.com/healthkey-ai/promop) (OMOP CDM v6.0).
+Real-world evidence analytics for oncology patient cohorts, built on top of [PROMOP](https://github.com/healthkey-ai/promop) (OMOP CDM 5.4).
 
 ## Overview
 
@@ -39,7 +39,7 @@ Filter patients by:
 | Layer | Technology |
 |---|---|
 | Backend | Django 5 + Django REST Framework |
-| Database | PostgreSQL (OMOP CDM v6.0) via PROMOP |
+| Database | PostgreSQL (OMOP CDM 5.4) via PROMOP |
 | Frontend | React 19 + TypeScript + Vite |
 | Styling | Tailwind CSS v4 |
 | Charts | Recharts |
@@ -102,13 +102,21 @@ The app is available at `http://localhost:5173/`. API requests to `/api/*` are p
 
 ### Seeding Sample Data
 
-To populate 100 realistic Multiple Myeloma patients with clinically plausible treatment histories and outcome distributions:
+The recommended way to populate a PROMOP database with synthetic oncology patients is via PROMOP's built-in FHIR pipeline. See the [PROMOP quickstart guide](https://github.com/healthkey-ai/promop/blob/dev/docs/quickstart.md) for full instructions. In short:
 
 ```bash
-python seed_mm_patients.py
+# Generate a synthetic FHIR bundle
+python manage.py generate_fhir_bundle --patients 100 --disease MM
+
+# Import the bundle into the PROMOP database
+python manage.py import_fhir_bundle bundle.json
 ```
 
-Outcome probabilities are drawn from published trial data (GRIFFIN, MAIA, KarMMa, CARTITUDE-1, DREAMM-2, etc.) and risk-adjusted for high-risk cytogenetics.
+Alternatively, the repository includes a standalone seed script for 100 Multiple Myeloma patients with clinically plausible treatment histories and outcome distributions drawn from published trial data (GRIFFIN, MAIA, KarMMa, CARTITUDE-1, DREAMM-2, etc.), risk-adjusted for high-risk cytogenetics:
+
+```bash
+DATABASE_URL="postgresql://..." python seed_mm_patients.py
+```
 
 ## Deploying to Render
 
