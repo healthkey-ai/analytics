@@ -1,0 +1,31 @@
+{
+  "creators": [
+    {
+      "name": "Blum, Adam",
+      "orcid": "0009-0009-4985-7615",
+      "affiliation": "HealthKey AI",
+      "type": "ProjectLeader"
+    }
+  ],
+  "title": "PRISM: Real-world evidence analytics for oncology patient cohorts",
+  "version": "1.0.0",
+  "upload_type": "software",
+  "license": "apache-2.0",
+  "access_right": "open",
+  "language": "eng",
+  "keywords": [
+    "real-world evidence",
+    "oncology",
+    "OMOP",
+    "cohort analytics",
+    "Django",
+    "React"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/healthkey-ai/prism",
+      "relation": "isSupplementTo",
+      "resource_type": "software"
+    }
+  ]
+}
