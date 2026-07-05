@@ -1,10 +1,15 @@
 from django.db import migrations
 
 
+# Ensure the column exists before backfilling — 0005 uses ADD COLUMN IF NOT
+# EXISTS too, so whichever migration runs first wins and the other is a no-op.
+ADD_IS_PREMIUM = """
+ALTER TABLE identity
+    ADD COLUMN IF NOT EXISTS is_premium boolean NOT NULL DEFAULT false;
+"""
+
 # Backfill is_premium from accounts_userprofile BEFORE dropping the table.
 # Any user with role='premium' in UserProfile gets identity.is_premium=True.
-# Migration 0005 adds the column with DEFAULT false, so without this step
-# all premium users would silently lose access after the table is dropped.
 BACKFILL_PREMIUM = """
 UPDATE identity
 SET is_premium = true
@@ -47,6 +52,8 @@ END $$;
 
 
 def backfill_profile_data(apps, schema_editor):
+    if schema_editor.connection.vendor == "postgresql":
+        schema_editor.execute(ADD_IS_PREMIUM)
     schema_editor.execute(BACKFILL_PREMIUM)
     if schema_editor.connection.vendor == "postgresql":
         schema_editor.execute(BACKFILL_ORG_ACCESS)
