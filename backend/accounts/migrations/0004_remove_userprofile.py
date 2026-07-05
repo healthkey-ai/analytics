@@ -22,13 +22,8 @@ WHERE id IN (
 # BEFORE dropping the table. Wrapped in a DO block so it is a no-op when
 # PRomop's tables don't exist (e.g., in the test DB).
 #
-# NOTE: This matches orgs by name across PRism's accounts_organization and
-# PRomop's organization table. Verify the name join is correct before deploying:
-#   SELECT ao.name, po.name
-#   FROM accounts_userprofile up
-#   JOIN accounts_organization ao ON ao.id = up.organization_id
-#   JOIN organization po ON po.name = ao.name
-#   WHERE up.organization_id IS NOT NULL;
+# UserProfile.organization is a CharField (text), not a FK, so we join
+# directly on the name rather than through accounts_organization.
 BACKFILL_ORG_ACCESS = """
 DO $$
 BEGIN
@@ -42,9 +37,8 @@ BEGIN
         INSERT INTO group_access (identity_id, org_id, role)
         SELECT up.user_id, po.id, 'member'
         FROM accounts_userprofile up
-        JOIN accounts_organization ao ON ao.id = up.organization_id
-        JOIN organization po ON po.name = ao.name
-        WHERE up.organization_id IS NOT NULL
+        JOIN organization po ON po.name = up.organization
+        WHERE up.organization IS NOT NULL AND up.organization <> ''
         ON CONFLICT DO NOTHING;
     END IF;
 END $$;
