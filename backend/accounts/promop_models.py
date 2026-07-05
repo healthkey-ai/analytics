@@ -1,7 +1,7 @@
 """
 Read-only unmanaged mirrors of PROMOP's shared-DB tables.
 
-Prism and PROMOP share the same PostgreSQL database. These models let Prism
+PRism and PROMOP share the same PostgreSQL database. These models let PRism
 read PROMOP's organisation and trust tables without owning or migrating them.
 """
 from django.db import models

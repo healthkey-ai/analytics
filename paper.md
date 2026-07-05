@@ -1,5 +1,5 @@
 ---
-title: 'Prism: An Open-Source Real-World Evidence Analytics Platform for Oncology Patient Cohorts'
+title: 'PRism: An Open-Source Real-World Evidence Analytics Platform for Oncology Patient Cohorts'
 tags:
   - Python
   - Django
@@ -22,17 +22,17 @@ bibliography: paper.bib
 
 # Summary
 
-Prism is an open-source web application for interactive real-world evidence (RWE) analytics on oncology patient cohorts. It connects to a PostgreSQL database following the PROMOP schema—an oncology-focused extension of the Observational Medical Outcomes Partnership (OMOP) Common Data Model (CDM) v5.4 [@garza2020]—and provides a point-and-click cohort builder paired with a suite of survival, treatment pattern, and demographic analytics. Analytical computations run server-side in Python, delivering pre-aggregated JSON to a React/TypeScript frontend optimized for clinical researchers without programming experience.
+PRism is an open-source web application for interactive real-world evidence (RWE) analytics on oncology patient cohorts. It connects to a PostgreSQL database following the PROMOP schema—an oncology-focused extension of the Observational Medical Outcomes Partnership (OMOP) Common Data Model (CDM) v5.4 [@garza2020]—and provides a point-and-click cohort builder paired with a suite of survival, treatment pattern, and demographic analytics. Analytical computations run server-side in Python, delivering pre-aggregated JSON to a React/TypeScript frontend optimized for clinical researchers without programming experience.
 
-Built on Django 5 and Django REST Framework, Prism exposes a REST API that accepts cohort filter parameters and returns metrics computed against the live patient dataset. A debounced frontend ensures analytics update within milliseconds of each filter change without overwhelming the backend.
+Built on Django 5 and Django REST Framework, PRism exposes a REST API that accepts cohort filter parameters and returns metrics computed against the live patient dataset. A debounced frontend ensures analytics update within milliseconds of each filter change without overwhelming the backend.
 
 # Statement of Need
 
 Real-world evidence derived from electronic health records and registries is increasingly used to inform drug development, regulatory submissions, and clinical practice guidelines [@sherman2016; @blonde2022]. However, generating RWE analyses typically requires either custom programming expertise or access to expensive commercial platforms. Oncology researchers working with institutional registries often lack both.
 
-Existing open-source OMOP analytics tools such as ATLAS [@hripcsak2015] focus primarily on observational study design and population-level cohort characterization. Prism complements these tools by providing a purpose-built analytics layer for oncology RWE, with disease-specific survival analyses, treatment sequence visualization, and subgroup stratification designed for clinical investigators rather than data engineers.
+Existing open-source OMOP analytics tools such as ATLAS [@hripcsak2015] focus primarily on observational study design and population-level cohort characterization. PRism complements these tools by providing a purpose-built analytics layer for oncology RWE, with disease-specific survival analyses, treatment sequence visualization, and subgroup stratification designed for clinical investigators rather than data engineers.
 
-Prism is self-hostable, requires no proprietary software, and exposes a documented REST API, enabling institutions to deploy it against their own OMOP-structured registry data.
+PRism is self-hostable, requires no proprietary software, and exposes a documented REST API, enabling institutions to deploy it against their own OMOP-structured registry data.
 
 # Features
 
@@ -52,10 +52,10 @@ The backend test suite (pytest, ~2,400 lines across 18 files) covers KM curve co
 
 # Availability
 
-Prism is available at [https://github.com/healthkey-ai/prism](https://github.com/healthkey-ai/prism) under the Apache 2.0 license. A live demonstration instance running on synthetic data from fictional oncology foundations is available at [https://prism-dev.onrender.com](https://prism-dev.onrender.com). Installation instructions and deployment guides are provided in the repository README.
+PRism is available at [https://github.com/healthkey-ai/prism](https://github.com/healthkey-ai/prism) under the Apache 2.0 license. A live demonstration instance running on synthetic data from fictional oncology foundations is available at [https://prism-dev.onrender.com](https://prism-dev.onrender.com). Installation instructions and deployment guides are provided in the repository README.
 
 # Acknowledgements
 
-Prism builds on the OMOP Common Data Model v5.4 as implemented in PROMOP [@promop]. Survival analysis uses the SciPy scientific computing library [@virtanen2020]. Outcome probability distributions used for synthetic data generation were drawn from published clinical trial reports including GRIFFIN, MAIA, KarMMa, CARTITUDE-1, and DREAMM-2.
+PRism builds on the OMOP Common Data Model v5.4 as implemented in PROMOP [@promop]. Survival analysis uses the SciPy scientific computing library [@virtanen2020]. Outcome probability distributions used for synthetic data generation were drawn from published clinical trial reports including GRIFFIN, MAIA, KarMMa, CARTITUDE-1, and DREAMM-2.
 
 # References

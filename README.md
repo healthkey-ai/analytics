@@ -1,4 +1,4 @@
-# Prism
+# PRism
 
 [![Tests](https://github.com/healthkey-ai/prism/actions/workflows/test.yml/badge.svg)](https://github.com/healthkey-ai/prism/actions/workflows/test.yml)
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.XXXXX/status.svg)](https://doi.org/10.21105/joss.XXXXX)
@@ -143,8 +143,8 @@ gunicorn analytics_project.wsgi:application --bind 0.0.0.0:$PORT
 
 The backend connects to a PROMOP PostgreSQL instance and reads from the `patient_info` denormalized view via an unmanaged Django model. Connection settings live in `backend/analytics_project/settings.py`.
 
-## Citing Prism
+## Citing PRism
 
-If you use Prism in research, please cite:
+If you use PRism in research, please cite:
 
-> Blum, A. (2026). Prism: An Open-Source Real-World Evidence Analytics Platform for Oncology Patient Cohorts. *Journal of Open Source Software*. https://doi.org/10.21105/joss.XXXXX
+> Blum, A. (2026). PRism: An Open-Source Real-World Evidence Analytics Platform for Oncology Patient Cohorts. *Journal of Open Source Software*. https://doi.org/10.21105/joss.XXXXX

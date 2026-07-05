@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS identity (
     name        varchar(255)  NOT NULL DEFAULT '',
     is_active   boolean       NOT NULL DEFAULT true,
     is_staff    boolean       NOT NULL DEFAULT false,
+    is_premium  boolean       NOT NULL DEFAULT false,
     created_at  timestamptz   NOT NULL DEFAULT now(),
     CONSTRAINT identity_uid_key UNIQUE (uid)
 );

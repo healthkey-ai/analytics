@@ -1,7 +1,7 @@
 # Plan: Google OAuth Signup/Login
 
 ## Context
-Prism currently supports email+password auth only. Adding Google OAuth lets users sign in with their Google account — lower friction and no password to manage. The `Identity` model already has `issuer`/`sub`/`uid` fields designed for multi-provider auth, and `IdentityManager.get_or_create_from_claims()` already handles federated identity creation. Auth is session-based (no JWT).
+PRism currently supports email+password auth only. Adding Google OAuth lets users sign in with their Google account — lower friction and no password to manage. The `Identity` model already has `issuer`/`sub`/`uid` fields designed for multi-provider auth, and `IdentityManager.get_or_create_from_claims()` already handles federated identity creation. Auth is session-based (no JWT).
 
 ## Branch
 Create `feature/google-oauth` from `dev`.

@@ -1,4 +1,4 @@
-# Contributing to Prism
+# Contributing to PRism
 
 Thank you for your interest in contributing. This document covers how to set up your development environment, run tests, and submit changes.
 

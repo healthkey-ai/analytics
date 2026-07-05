@@ -162,6 +162,21 @@ class TestSavedCohortDetail:
 class TestSavedCohortExport:
     _SAMPLE_ROWS = [{"id": 1, "patient_age": 65, "gender": "M", "disease": "Multiple Myeloma"}]
 
+    @pytest.fixture
+    def user(self, make_user):
+        return make_user(email="owner@example.com", is_premium=True)
+
+    @pytest.fixture
+    def other_user(self, make_user):
+        return make_user(email="other@example.com", is_premium=True)
+
+    # Patch apply_org_scope for all export tests — PROMOP org tables don't
+    # exist in the test DB; org-scoping logic is tested in test_org_scoping.py.
+    @pytest.fixture(autouse=True)
+    def mock_org_scope(self):
+        with patch("cohorts.saved_views.apply_org_scope", side_effect=lambda qs, user: (qs, None)):
+            yield
+
     def test_csv_export_returns_csv_content_type(self, api_client, user, cohort):
         api_client.force_authenticate(user=user)
         mock_qs = _mock_export_qs(self._SAMPLE_ROWS)
@@ -273,6 +288,15 @@ class TestCohortCap:
 
 @pytest.mark.django_db
 class TestExportThrottle:
+    @pytest.fixture
+    def user(self, make_user):
+        return make_user(email="owner@example.com", is_premium=True)
+
+    @pytest.fixture(autouse=True)
+    def mock_org_scope(self):
+        with patch("cohorts.saved_views.apply_org_scope", side_effect=lambda qs, user: (qs, None)):
+            yield
+
     def test_throttled_export_returns_429(self, api_client, user, cohort):
         api_client.force_authenticate(user=user)
         with patch("cohorts.saved_views.ExportRateThrottle.allow_request", return_value=False), \
