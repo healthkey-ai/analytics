@@ -50,6 +50,11 @@ export default function SubgroupSurvival({ data }: Props) {
   const lines = data[strat][outcome]
   const pValue = outcome === 'os' ? data[strat].os_p : data[strat].pfs_p
 
+  const chartData = useMemo(
+    () => mergeKMCurves((lines ?? []).map((l, i) => ({ key: `g${i}`, curve: l.curve }))),
+    [lines]
+  )
+
   const toggleClass = (active: boolean) =>
     `px-4 py-1.5 text-xs rounded-md font-semibold transition-colors ${
       active ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
@@ -62,11 +67,6 @@ export default function SubgroupSurvival({ data }: Props) {
       </div>
     )
   }
-
-  const chartData = useMemo(
-    () => mergeKMCurves(lines.map((l, i) => ({ key: `g${i}`, curve: l.curve }))),
-    [lines]
-  )
 
   return (
     <div>
@@ -123,16 +123,14 @@ export default function SubgroupSurvival({ data }: Props) {
             label={{ value: 'Survival probability', angle: -90, position: 'insideLeft', fontSize: 11, offset: 10 }}
           />
           <Tooltip
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            formatter={((v: unknown, name: unknown) => {
+            formatter={(v: unknown, name: unknown) => {
               const nameStr = String(name)
               if (nameStr.endsWith('_lower') || nameStr.endsWith('_upper')) return null
               const idx = Number(nameStr.replace('g', ''))
               const label = lines[idx]?.label ?? nameStr
               return [`${(Number(v) * 100).toFixed(1)}%`, label]
-            }) as any}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            labelFormatter={((t: number) => `${t} months`) as any}
+            }}
+            labelFormatter={(t: unknown) => `${Number(t)} months`}
             contentStyle={{ fontSize: 12 }}
           />
           <ReferenceLine y={0.5} stroke="#9ca3af" strokeDasharray="4 4" />

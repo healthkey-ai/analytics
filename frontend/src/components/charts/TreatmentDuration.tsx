@@ -68,11 +68,10 @@ function DurationChart({ rows }: { rows: TreatmentDurationRow[] }) {
         />
         <Tooltip
           contentStyle={{ fontSize: 12 }}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          formatter={((v: unknown, _n: unknown, e: { payload?: { count?: number } }) => [
+          formatter={(v: unknown, _n: unknown, e: { payload?: { count?: number } }) => [
             `${Number(v).toFixed(1)} mo (n=${e.payload?.count ?? ''})`,
             'Median Duration',
-          ]) as any}
+          ]}
         />
         <Bar dataKey="median" radius={[0, 3, 3, 0]}>
           {top.map((entry, idx) => (
@@ -82,8 +81,7 @@ function DurationChart({ rows }: { rows: TreatmentDurationRow[] }) {
             dataKey="median"
             position="right"
             style={{ fontSize: 10, fill: '#374151' }}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            formatter={((v: unknown) => `${Number(v).toFixed(1)}mo`) as any}
+            formatter={(v: unknown) => `${Number(v).toFixed(1)}mo`}
           />
         </Bar>
       </BarChart>

@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework import status
 
-from .models import Identity, Organization, UserProfile
+from .models import Identity, Organization
 
 
 @api_view(["POST"])
@@ -38,27 +38,12 @@ def logout_view(request):
 @permission_classes([AllowAny])
 @throttle_classes([AnonRateThrottle])
 def signup_view(request):
-    email        = request.data.get("email", "").strip()
-    password     = request.data.get("password", "")
-    name         = request.data.get("name", "").strip()
-    organization = request.data.get("organization", "").strip()
+    email    = request.data.get("email", "").strip()
+    password = request.data.get("password", "")
+    name     = request.data.get("name", "").strip()
 
     if not email or not password:
         return Response({"detail": "Email and password are required."}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Validate org + email-domain restriction (org is optional)
-    if organization:
-        try:
-            org_obj = Organization.objects.get(name=organization)
-        except Organization.DoesNotExist:
-            return Response({"detail": "Invalid organisation."}, status=status.HTTP_400_BAD_REQUEST)
-        if org_obj.allowed_email_domain:
-            email_domain = email.split("@")[-1].lower()
-            if email_domain != org_obj.allowed_email_domain.lower():
-                return Response(
-                    {"detail": f"This organisation requires an @{org_obj.allowed_email_domain} email address."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
 
     try:
         validate_password(password)
@@ -68,7 +53,6 @@ def signup_view(request):
     try:
         with transaction.atomic():
             user = Identity.objects.create_user(email=email, password=password, name=name)
-            UserProfile.objects.create(user=user, organization=organization, role=UserProfile.ROLE_USER)
     except IntegrityError:
         return Response({"detail": "An account with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -105,19 +89,13 @@ def my_orgs_view(request):
     from patients.models import PatientInfo
     from accounts.utils import get_visible_org_names
 
-    try:
-        profile = request.user.profile
-    except UserProfile.DoesNotExist:
-        return Response([])
-
-    if profile.role == UserProfile.ROLE_STAFF:
+    if request.user.is_staff:
         orgs = (
             PatientInfo.objects
             .exclude(organization__isnull=True)
-            .exclude(organization="")
-            .values_list("organization", flat=True)
+            .values_list("organization__name", flat=True)
             .distinct()
-            .order_by("organization")
+            .order_by("organization__name")
         )
         return Response([{"value": o, "label": o} for o in orgs])
 
@@ -126,18 +104,12 @@ def my_orgs_view(request):
 
 
 def _user_data(user):
-    try:
-        profile = user.profile
-        role         = profile.role
-        organization = profile.organization
-    except UserProfile.DoesNotExist:
-        role         = UserProfile.ROLE_USER
-        organization = ""
+    is_premium = getattr(user, "is_premium", False)
     return {
-        "uid":          user.uid,
-        "email":        user.email,
-        "name":         user.name,
-        "is_staff":     user.is_staff,
-        "role":         role,
-        "organization": organization,
+        "uid":        user.uid,
+        "email":      user.email,
+        "name":       user.name,
+        "is_staff":   user.is_staff,
+        "is_premium": is_premium,
+        "role":       "staff" if user.is_staff else "user",
     }

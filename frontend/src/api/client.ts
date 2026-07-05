@@ -72,8 +72,8 @@ export async function logout() {
   await api.post('/auth/logout/')
 }
 
-export async function signup(email: string, password: string, name: string, organization: string) {
-  const { data } = await api.post('/auth/signup/', { email, password, name, organization })
+export async function signup(email: string, password: string, name: string) {
+  const { data } = await api.post('/auth/signup/', { email, password, name })
   return data
 }
 

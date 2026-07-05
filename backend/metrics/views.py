@@ -25,6 +25,14 @@ from metrics.services import (
 from metrics.services.survival import landmark_os_km
 
 
+MM_ONLY_DISEASES = {"multiple myeloma"}
+
+
+def _is_mm_request(request) -> bool:
+    disease = (request.query_params.get("disease") or "").strip().lower()
+    return disease in MM_ONLY_DISEASES
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def metrics(request):
@@ -38,7 +46,7 @@ def metrics(request):
     if count == 0:
         return Response({"cohort": {"count": 0}})
 
-    return Response({
+    payload = {
         "cohort":              {"count": count},
         "response_rates":      response_rates.compute(qs),
         "treatment_patterns":  treatment_patterns.compute(qs),
@@ -49,12 +57,16 @@ def metrics(request):
         "survival":            survival.compute(qs),
         "ttnt":                ttnt.compute(qs),
         "switching":           switching.compute(qs),
-        "subgroup_survival":   subgroup_survival.compute(qs),
         "pathway_sunburst":          pathway_sunburst.compute(qs),
         "dor":                       dor.compute(qs),
-        "forest_plot":               forest_plot.compute(qs),
         "cohort_characterization":   cohort_characterization.compute(qs),
         "incidence":                 incidence.compute(qs),
         "time_to_treatment":         time_to_treatment.compute(qs),
         "landmark_survival":         landmark_os_km(qs),
-    })
+    }
+
+    if _is_mm_request(request):
+        payload["subgroup_survival"] = subgroup_survival.compute(qs)
+        payload["forest_plot"] = forest_plot.compute(qs)
+
+    return Response(payload)

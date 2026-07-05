@@ -7,6 +7,13 @@ interface Props {
   refreshToken: number
 }
 
+function responseStatus(err: unknown): number | undefined {
+  if (!err || typeof err !== 'object' || !('response' in err)) return undefined
+  const response = err.response
+  if (!response || typeof response !== 'object' || !('status' in response)) return undefined
+  return typeof response.status === 'number' ? response.status : undefined
+}
+
 export default function SavedCohortsList({ onLoad, refreshToken }: Props) {
   const [cohorts, setCohorts] = useState<SavedCohort[]>([])
   const [loading, setLoading] = useState(true)
@@ -16,15 +23,30 @@ export default function SavedCohortsList({ onLoad, refreshToken }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    setLoading(true)
-    setError(null)
-    fetchSavedCohorts()
-      .then(setCohorts)
-      .catch((err) => {
-        setError(err?.response?.status === 401 ? 'Session expired. Please log in again.' : 'Failed to load saved cohorts.')
+    let cancelled = false
+
+    async function loadSavedCohorts() {
+      if (cancelled) return
+      setLoading(true)
+      setError(null)
+
+      try {
+        const saved = await fetchSavedCohorts()
+        if (cancelled) return
+        setCohorts(saved)
+      } catch (err) {
+        if (cancelled) return
+        setError(responseStatus(err) === 401 ? 'Session expired. Please log in again.' : 'Failed to load saved cohorts.')
         setCohorts([])
-      })
-      .finally(() => setLoading(false))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadSavedCohorts()
+    return () => {
+      cancelled = true
+    }
   }, [refreshToken])
 
   useEffect(() => {

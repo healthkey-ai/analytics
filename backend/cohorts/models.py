@@ -3,8 +3,8 @@ from django.db import models
 
 
 class SavedCohort(models.Model):
-    # db_constraint=False because the identity table is managed by ctomop,
-    # not this app. On a fresh DB, migrate will fail if ctomop hasn't run yet
+    # db_constraint=False because the identity table is managed by promop,
+    # not this app. On a fresh DB, migrate will fail if promop hasn't run yet
     # and the identity table doesn't exist.
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

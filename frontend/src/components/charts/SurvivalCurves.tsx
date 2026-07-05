@@ -72,15 +72,13 @@ export default function SurvivalCurves({ data }: Props) {
             label={{ value: 'Survival probability', angle: -90, position: 'insideLeft', fontSize: 11, offset: 10 }}
           />
           <Tooltip
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            formatter={((v: unknown, name: unknown) => {
+            formatter={(v: unknown, name: unknown) => {
               const nameStr = String(name)
               if (nameStr.endsWith('_lower') || nameStr.endsWith('_upper')) return null
               const cfg = LINE_CONFIG.find((c) => c.key === nameStr)
               return [`${(Number(v) * 100).toFixed(1)}%`, cfg?.label ?? nameStr]
-            }) as any}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            labelFormatter={((t: number) => `${t} months`) as any}
+            }}
+            labelFormatter={(t: unknown) => `${Number(t)} months`}
             contentStyle={{ fontSize: 12 }}
           />
           <ReferenceLine y={0.5} stroke="#9ca3af" strokeDasharray="4 4" />

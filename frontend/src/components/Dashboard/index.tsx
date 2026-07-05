@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import type { CohortFilters, MetricsResponse, User } from '../../types'
+import type { MetricsResponse, User } from '../../types'
 import MetricCard from '../ui/MetricCard'
 import ResponseRates from '../charts/ResponseRates'
 import TreatmentPatterns from '../charts/TreatmentPatterns'
@@ -29,22 +29,7 @@ interface Props {
   user: User
   onLogout: () => void
   activeSavedCohortId: number | null
-  filters: CohortFilters
-  onUpdateFilter: <K extends keyof CohortFilters>(key: K, val: CohortFilters[K]) => void
-  orgOptions: { value: string; label: string }[]
-  stageOptions?: string[]
-  diseaseOptions?: string[]
 }
-
-const DATE_OPTIONS = [
-  { value: '',          label: 'All dates' },
-  { value: '7d',        label: 'Last 7 days' },
-  { value: '30d',       label: 'Last 30 days' },
-  { value: '90d',       label: 'Last 90 days' },
-  { value: 'this_year', label: 'This year' },
-]
-
-const SELECT_CLS = 'h-9 rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-700 w-full focus:outline-none focus:ring-1 focus:ring-teal-500'
 
 type DashboardTab    = 'outcomes' | 'treatments' | 'profile'
 type ResponseLineTab = '1L' | '2L' | '3L+'
@@ -71,8 +56,9 @@ function NoDataPlaceholder() {
   )
 }
 
-export default function Dashboard({ metrics, loading, disease, user, onLogout, activeSavedCohortId, filters, onUpdateFilter, orgOptions, stageOptions = [], diseaseOptions = [] }: Props) {
-  const canExport = (user.role ?? 'user') === 'premium' || (user.role ?? 'user') === 'staff'
+export default function Dashboard({ metrics, loading, disease, user, onLogout, activeSavedCohortId }: Props) {
+  const canExport = user.is_premium === true || user.is_staff === true
+  const isMultipleMyeloma = disease === 'Multiple Myeloma'
   const [tab, setTab]                 = useState<DashboardTab>('outcomes')
   const [responseTab, setResponseTab] = useState<ResponseLineTab>('1L')
   const [showExportMenu, setShowExportMenu] = useState(false)
@@ -157,75 +143,10 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
           </div>
         </div>
 
-        {/* Filter selection bar */}
-        <div className="border-t border-gray-100 px-6 py-2">
-          <div className="grid grid-cols-4 gap-3 max-w-[1400px] mx-auto">
-            {/* Org */}
-            <select
-              value={filters.org ?? ''}
-              onChange={e => onUpdateFilter('org', e.target.value || undefined)}
-              className={SELECT_CLS}
-            >
-              <option value="">All orgs</option>
-              {orgOptions.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-
-            {/* Disease — no 'All diseases' option; cross-disease cohorts are clinically meaningless */}
-            <select
-              value={filters.disease ?? ''}
-              onChange={e => {
-                onUpdateFilter('disease', e.target.value || undefined)
-                // Clear stage whenever disease changes — stage options are disease-specific
-                onUpdateFilter('stage', undefined)
-              }}
-              className={SELECT_CLS}
-            >
-              {diseaseOptions.map(d => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-
-            {/* Stage — disabled when CohortPanel has a multi-stage selection to prevent silent clobber */}
-            <select
-              value={
-                (filters.stage?.length ?? 0) > 1
-                  ? '__multiple__'
-                  : filters.stage?.[0] ?? ''
-              }
-              disabled={(filters.stage?.length ?? 0) > 1}
-              onChange={e => {
-                const val = e.target.value
-                onUpdateFilter('stage', val ? [val] : undefined)
-              }}
-              className={SELECT_CLS}
-            >
-              {(filters.stage?.length ?? 0) > 1 && (
-                <option value="__multiple__">Multiple stages selected</option>
-              )}
-              <option value="">All stages</option>
-              {stageOptions.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-
-            {/* Date */}
-            <select
-              value={filters.date ?? ''}
-              onChange={e => onUpdateFilter('date', e.target.value || undefined)}
-              className={SELECT_CLS}
-            >
-              {DATE_OPTIONS.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-        </div>
       </header>
 
       {/* Tab bar */}
-      <div className="sticky top-[120px] z-10 bg-white border-b border-gray-200 px-6">
+      <div className="sticky top-[73px] z-10 bg-white border-b border-gray-200 px-6">
         <div className="flex items-center justify-between max-w-[1400px] mx-auto">
           <div className="flex">
             {TABS.map(({ id, label }) => (
@@ -292,18 +213,29 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
           </div>
         ) : tab === 'outcomes' ? (
           <>
-            <MetricCard title="Progression-Free Survival">
+            <MetricCard
+              title="Progression-Free Survival"
+              description="Kaplan-Meier curve showing the probability of patients remaining progression-free or alive over time from first-line therapy start. The median PFS is the time point at which 50% of patients have experienced progression or death. Shaded area represents the 95% confidence interval."
+            >
               {metrics?.survival ? <SurvivalCurves data={metrics.survival} /> : <NoDataPlaceholder />}
             </MetricCard>
 
-            <MetricCard title="Survival by Subgroup">
-              {metrics?.subgroup_survival
-                ? <SubgroupSurvival data={metrics.subgroup_survival} />
-                : <NoDataPlaceholder />}
-            </MetricCard>
+            {isMultipleMyeloma && (
+              <MetricCard
+                title="Survival by Subgroup"
+                description="Kaplan-Meier survival curves stratified by ISS disease stage, cytogenetic risk (high-risk vs. standard-risk), and SCT history. Patients without a cytogenetics workup are excluded from the risk subgroups. Enables side-by-side comparison of outcomes across biologically distinct patient populations."
+              >
+                {metrics?.subgroup_survival
+                  ? <SubgroupSurvival data={metrics.subgroup_survival} />
+                  : <NoDataPlaceholder />}
+              </MetricCard>
+            )}
 
             {metrics?.landmark_survival && metrics.landmark_survival.n > 0 && (
-              <MetricCard title={`Landmark Overall Survival (${metrics.landmark_survival.landmark_months}-month landmark, n = ${metrics.landmark_survival.n})`}>
+              <MetricCard
+                title={`Landmark Overall Survival (${metrics.landmark_survival.landmark_months}-month landmark, n = ${metrics.landmark_survival.n})`}
+                description="Overall survival measured from a fixed landmark time point, including only patients who were alive and event-free at that point. This method eliminates early-death bias and estimates survival conditional on reaching the landmark — a standard technique when comparing outcomes across different treatment eras."
+              >
                 <SurvivalCurves data={{
                   os:  metrics.landmark_survival,
                   pfs: { curve: [], n: 0, median: null },
@@ -312,7 +244,10 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               </MetricCard>
             )}
 
-            <MetricCard title="Response Rates">
+            <MetricCard
+              title="Response Rates"
+              description="Best response to therapy across each treatment line (1st, 2nd, 3rd+). Responses are classified by depth: sCR (stringent complete response), CR (complete response), VGPR (very good partial response), PR (partial response), SD (stable disease), and PD (progressive disease), per standard disease-specific criteria."
+            >
               <div className="flex gap-1 rounded-lg border border-gray-200 p-0.5 bg-gray-50 w-fit mb-4">
                 {(['1L', '2L', '3L+'] as ResponseLineTab[]).map((t) => (
                   <button
@@ -336,18 +271,29 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               />
             </MetricCard>
 
-            <MetricCard title="Duration of Response (DOR)">
+            <MetricCard
+              title="Duration of Response (DOR)"
+              description="Time from first documented response (≥PR) to disease progression or death among patients who responded to therapy. Presented as a Kaplan-Meier curve for responders only. DOR measures the durability of treatment benefit and complements overall response rate — a high ORR with short DOR indicates transient rather than sustained disease control."
+            >
               {metrics?.dor ? <DurationOfResponse data={metrics.dor} /> : <NoDataPlaceholder />}
             </MetricCard>
 
-            <MetricCard title="Subgroup Forest Plot — Overall Survival">
-              <ForestPlot data={metrics?.forest_plot ?? []} />
-            </MetricCard>
+            {isMultipleMyeloma && (
+              <MetricCard
+                title="Subgroup Forest Plot — Overall Survival"
+                description="Hazard ratios (HR) for overall survival across prespecified subgroups. Each row shows the HR and 95% confidence interval for a subgroup relative to its complement. An HR < 1 (left of center) indicates better survival in that subgroup. Wide confidence intervals reflect small sample sizes within the subgroup."
+              >
+                <ForestPlot data={metrics?.forest_plot ?? []} />
+              </MetricCard>
+            )}
           </>
         ) : tab === 'treatments' ? (
           <>
             {/* Treatment Pathways: sunburst + Sankey side by side */}
-            <MetricCard title="Treatment Pathways (OHDSI-Style)">
+            <MetricCard
+              title="Treatment Pathways (OHDSI-Style)"
+              description="Visualizes real-world treatment sequences using the OHDSI Treatment Pathways methodology. The sunburst chart shows how patients flow through lines of therapy, with each ring representing a successive treatment line and segment size proportional to patient count. The Sankey diagram shows the same flows as directed transitions, making it easy to identify the most common sequencing patterns."
+            >
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Pathway Sunburst</h3>
@@ -366,10 +312,16 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
 
             {/* 1L Patterns + Lines of Therapy */}
             <div className="grid grid-cols-2 gap-6">
-              <MetricCard title="1st Line Treatment Patterns">
+              <MetricCard
+                title="1st Line Treatment Patterns"
+                description="Distribution of first-line regimens used in the cohort, ranked by frequency. Each bar represents the percentage of patients who received that regimen as their initial therapy. Helps identify dominant treatment approaches and variation in prescribing practice across sites or time periods."
+              >
                 <TreatmentPatterns data={metrics?.treatment_patterns?.first_line ?? []} title="" />
               </MetricCard>
-              <MetricCard title="Lines of Therapy">
+              <MetricCard
+                title="Lines of Therapy"
+                description="Left: a funnel showing how many patients advanced to each successive line of therapy (1L → 2L → 3L+), illustrating patient attrition as treatment progresses. Right: distribution of the total number of treatment lines each patient received, indicating the depth of therapy across the cohort."
+              >
                 <TreatmentLines
                   funnel={metrics?.treatment_patterns?.line_funnel ?? []}
                   distribution={metrics?.treatment_patterns?.line_distribution ?? []}
@@ -379,15 +331,24 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
 
             {/* Treatment Duration + Sequences */}
             <div className="grid grid-cols-2 gap-6">
-              <MetricCard title="Treatment Duration">
+              <MetricCard
+                title="Treatment Duration"
+                description="Median time on therapy for each treatment line, calculated from line start date to end date (or last follow-up if ongoing). Longer duration indicates better tolerability or sustained disease control. Box plots show the interquartile range; whiskers extend to the 5th and 95th percentiles."
+              >
                 {metrics?.treatment_duration ? <TreatmentDuration data={metrics.treatment_duration} /> : <NoDataPlaceholder />}
               </MetricCard>
-              <MetricCard title="Top Treatment Sequences">
+              <MetricCard
+                title="Top Treatment Sequences"
+                description="The most common multi-line treatment sequences observed in the cohort (e.g., VRd → Kd → DPd). Each sequence lists the regimens in order of administration; the count shows how many patients followed that exact path. Reveals dominant sequencing patterns and how often patients return to earlier drug classes."
+              >
                 <Sequences sequences={metrics?.treatment_patterns?.sequences ?? []} />
               </MetricCard>
             </div>
 
-            <MetricCard title="Time to First Treatment">
+            <MetricCard
+              title="Time to First Treatment"
+              description="Distribution of time (in days) from diagnosis date to start of first-line therapy. Short intervals suggest prompt initiation; long intervals may reflect watchful waiting, delayed diagnosis, or access barriers. The histogram shows the count of patients in each time bucket; the median and IQR are annotated."
+            >
               {metrics?.time_to_treatment
                 ? <TimeToTreatment data={metrics.time_to_treatment} />
                 : <NoDataPlaceholder />}
@@ -395,10 +356,16 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
 
             {/* TTNT + Switching */}
             <div className="grid grid-cols-2 gap-6">
-              <MetricCard title="Time to Next Treatment (TTNT)">
+              <MetricCard
+                title="Time to Next Treatment (TTNT)"
+                description="Kaplan-Meier estimate of time from end of one therapy to initiation of the next. TTNT is a real-world surrogate for time to progression that avoids dependence on formal response assessments — treatment change serves as the event. Shorter TTNT indicates faster progression or toxicity-driven discontinuation."
+              >
                 {metrics?.ttnt ? <TTNT data={metrics.ttnt} /> : <NoDataPlaceholder />}
               </MetricCard>
-              <MetricCard title="Treatment Switching Patterns">
+              <MetricCard
+                title="Treatment Switching Patterns"
+                description="Flow diagram showing transitions between regimens across treatment lines. The width of each flow is proportional to the number of patients making that switch. Highlights which drug classes patients move to after each line and identifies the most common escape pathways following treatment failure."
+              >
                 {metrics?.switching ? <Switching data={metrics.switching} /> : <NoDataPlaceholder />}
               </MetricCard>
             </div>
@@ -407,26 +374,41 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
         ) : (
           <>
             {metrics?.cohort_characterization && metrics.cohort_characterization.n > 0 && (
-              <MetricCard title="Cohort Characterization (Table 1)">
+              <MetricCard
+                title="Cohort Characterization (Table 1)"
+                description="Summary of baseline patient characteristics in the standard clinical research 'Table 1' format. Continuous variables are reported as median (IQR); categorical variables as count (%). Provides a quick audit of cohort composition — demographics, disease stage, performance status, comorbidities, and key lab values — before interpreting outcomes data."
+              >
                 <CohortCharacterization data={metrics.cohort_characterization} />
               </MetricCard>
             )}
 
-            <MetricCard title="New Diagnoses &amp; Treatment Starts Over Time">
+            <MetricCard
+              title="New Diagnoses & Treatment Starts Over Time"
+              description="Monthly or quarterly counts of new diagnoses and first-line treatment initiations plotted over the observation period. Useful for identifying enrollment trends, seasonal patterns, or changes in diagnostic practice. A growing gap between diagnosis and treatment-start lines may signal delayed care access over time."
+            >
               {metrics?.incidence && metrics.incidence.length > 0
                 ? <IncidenceChart data={metrics.incidence} />
                 : <NoDataPlaceholder />}
             </MetricCard>
 
-            <MetricCard title="Patient Demographics">
+            <MetricCard
+              title="Patient Demographics"
+              description="Distribution of age, sex, race, and ethnicity across the cohort. Age is shown as a histogram; categorical variables as proportional bar charts. Demographic composition affects generalizability — a cohort skewed toward younger or healthier patients may not reflect real-world outcomes in a broader population."
+            >
               {metrics?.demographics ? <Demographics data={metrics.demographics} /> : <NoDataPlaceholder />}
             </MetricCard>
 
-            <MetricCard title="Disease Staging &amp; Characteristics">
+            <MetricCard
+              title="Disease Staging & Characteristics"
+              description="Distribution of ISS/R-ISS staging, cytogenetic risk groups (high-risk vs. standard-risk), SCT eligibility and history, CRAB criteria, and other disease-defining characteristics at baseline. Higher proportions of ISS Stage III or high-risk cytogenetics indicate a more aggressive disease population."
+            >
               {metrics?.staging ? <StagingPanel data={metrics.staging} /> : <NoDataPlaceholder />}
             </MetricCard>
 
-            <MetricCard title="Laboratory Values at Baseline">
+            <MetricCard
+              title="Laboratory Values at Baseline"
+              description="Key lab values recorded at or near diagnosis: M-protein (serum and urine), beta-2 microglobulin, creatinine, hemoglobin, LDH, calcium, and others. Values are shown as box plots (median, IQR, range). Reference ranges are overlaid where applicable; values outside normal limits are highlighted in red."
+            >
               {metrics?.labs ? <LabsPanel data={metrics.labs} /> : <NoDataPlaceholder />}
             </MetricCard>
           </>

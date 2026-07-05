@@ -87,6 +87,45 @@ BC_LATER_LINE = [
     "Tucatinib + Trastuzumab + Capecitabine",
 ]
 
+FL_FIRST_LINE = [
+    "Bendamustine and Rituximab (BR)",
+    "R-CHOP",
+    "G-CHOP",
+    "R-CVP",
+    "Rituximab monotherapy",
+    "Obinutuzumab monotherapy",
+]
+FL_SECOND_LINE = [
+    "Bendamustine and Rituximab (BR)",
+    "R-CHOP",
+    "Rituximab monotherapy",
+    "Lenalidomide and Rituximab (R2)",
+    "Copanlisib monotherapy",
+    "Tazemetostat monotherapy",
+    "Mosunetuzumab monotherapy",
+    "Axicabtagene ciloleucel monotherapy",
+    "Tisagenlecleucel monotherapy",
+    "Epcoritamab monotherapy",
+    "Obinutuzumab monotherapy",
+]
+FL_LATER_LINE = [
+    "Axicabtagene ciloleucel monotherapy",
+    "Tisagenlecleucel monotherapy",
+    "Tazemetostat monotherapy",
+    "Mosunetuzumab monotherapy",
+    "Epcoritamab monotherapy",
+    "Copanlisib monotherapy",
+    "Bendamustine and Rituximab (BR)",
+    "Lenalidomide and Rituximab (R2)",
+    "Rituximab monotherapy",
+    "Obinutuzumab monotherapy",
+]
+FL_REFRACTORY = [
+    "Refractory to anti-CD20 (rituximab/obinutuzumab)",
+    "Double refractory (anti-CD20 + alkylating agent)",
+    "POD24 (progression within 24 months of 1L chemoimmunotherapy)",
+]
+
 THERAPY_MAP = {
     "Multiple Myeloma": {
         "first_line_therapies": MM_FIRST_LINE,
@@ -114,6 +153,15 @@ THERAPY_MAP = {
             "bc_specific": True,
             "er_pr_her2": True,
         },
+    },
+    "Follicular Lymphoma": {
+        "first_line_therapies": FL_FIRST_LINE,
+        "second_line_therapies": FL_SECOND_LINE,
+        "later_line_therapies": FL_LATER_LINE,
+        "refractory_statuses": FL_REFRACTORY,
+        "stages": ["I", "IB", "II", "III", "IIIB", "IV", "IVB"],
+        "cytogenetic_markers": ["t(14;18)", "del(1p36)", "TP53 mutation", "MYC rearrangement"],
+        "extra_filters": {},
     },
 }
 

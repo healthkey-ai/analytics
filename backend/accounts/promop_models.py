@@ -1,7 +1,7 @@
 """
 Read-only unmanaged mirrors of PROMOP's shared-DB tables.
 
-Prism and PROMOP share the same PostgreSQL database. These models let Prism
+PRism and PROMOP share the same PostgreSQL database. These models let PRism
 read PROMOP's organisation and trust tables without owning or migrating them.
 """
 from django.db import models
@@ -9,9 +9,10 @@ from django.db import models
 
 class PromopOrganization(models.Model):
     """Mirror of PROMOP's `organization` table."""
-    name      = models.CharField(max_length=200)
-    slug      = models.SlugField(max_length=60, unique=True)
-    is_active = models.BooleanField(default=True)
+    name                          = models.CharField(max_length=200)
+    slug                          = models.SlugField(max_length=60, unique=True)
+    is_active                     = models.BooleanField(default=True)
+    allows_public_aggregated_data = models.BooleanField(default=False)
 
     class Meta:
         managed  = False
@@ -44,3 +45,48 @@ class PromopOrgTrust(models.Model):
     class Meta:
         managed  = False
         db_table = "org_trust"
+
+
+class PromopPatientGroup(models.Model):
+    """Mirror of PROMOP's `patient_group` table for group-based org grants."""
+    organization = models.ForeignKey(
+        PromopOrganization, on_delete=models.DO_NOTHING,
+        db_column="organization_id", related_name="+",
+    )
+
+    class Meta:
+        managed = False
+        db_table = "patient_group"
+
+
+class PromopGroupAccess(models.Model):
+    """Mirror of PROMOP's `group_access` table."""
+    identity = models.ForeignKey(
+        "accounts.Identity",
+        on_delete=models.DO_NOTHING,
+        db_column="identity_id",
+        related_name="+",
+        db_constraint=False,
+    )
+    org = models.ForeignKey(
+        PromopOrganization,
+        on_delete=models.DO_NOTHING,
+        db_column="org_id",
+        related_name="+",
+        null=True,
+        blank=True,
+    )
+    group = models.ForeignKey(
+        PromopPatientGroup,
+        on_delete=models.DO_NOTHING,
+        db_column="group_id",
+        related_name="+",
+        null=True,
+        blank=True,
+    )
+    role = models.CharField(max_length=20)
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "group_access"

@@ -10,14 +10,12 @@ Death timing is calibrated against published real-world MM survival data:
 Target: ~50% of patients deceased by study cutoff 2026-05-31.
 """
 
+import os
 import random
 import psycopg2
 from datetime import date, timedelta
 
-DB_URL = (
-    "postgresql://ctomop_dev_user:IehVp8TGNcelOymGcjtfL6Up6W63DOf2"
-    "@dpg-d7pqr35ckfvc73bm0lc0-a.oregon-postgres.render.com/ctomop_dev"
-)
+DB_URL = os.environ["DATABASE_URL"]
 
 random.seed(99)  # different seed so death dates are independent of treatment choices
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import CohortPanel from './components/CohortPanel'
 import Dashboard from './components/Dashboard'
 import LoginPage from './components/Auth/LoginPage'
@@ -6,7 +6,6 @@ import { useAnalytics } from './hooks/useAnalytics'
 import { useAuth } from './hooks/useAuth'
 import type { AuthState } from './hooks/useAuth'
 import type { CohortFilters } from './types'
-import { fetchMyOrgs } from './api/client'
 
 export default function App() {
   const auth = useAuth()
@@ -31,13 +30,6 @@ function AuthenticatedApp({ auth }: { auth: AuthState }) {
   const [activeSavedCohortId, setActiveSavedCohortId] = useState<number | null>(null)
   const [activeCohortName, setActiveCohortName] = useState<string | null>(null)
   const [cohortDirty, setCohortDirty] = useState(false)
-  const [orgOptions, setOrgOptions] = useState<{ value: string; label: string }[]>([])
-
-  useEffect(() => {
-    fetchMyOrgs().then(setOrgOptions).catch((err) => {
-      console.error('Failed to load org options', err)
-    })
-  }, [])
 
   function handleLoadCohort(f: CohortFilters, cohortId?: number, cohortName?: string) {
     setFilters(f)
@@ -48,6 +40,27 @@ function AuthenticatedApp({ auth }: { auth: AuthState }) {
 
   function handleUpdateFilter<K extends keyof CohortFilters>(key: K, val: CohortFilters[K]) {
     if (activeSavedCohortId !== null) setCohortDirty(true)
+    if (key === 'disease') {
+      const disease = val as CohortFilters['disease']
+      setFilters(prev => ({
+        ...prev,
+        disease,
+        stage: undefined,
+        cytogenetic_markers: undefined,
+        high_risk_cytogenetics: undefined,
+        tp53_disruption: undefined,
+        refractory_status: undefined,
+        has_sct: undefined,
+        meets_crab: undefined,
+        has_bone_lesions: undefined,
+        plasma_cell_leukemia: undefined,
+        mrd_status: undefined,
+        er_status: undefined,
+        her2_status: undefined,
+        tnbc_status: undefined,
+      }))
+      return
+    }
     updateFilter(key, val)
   }
 
@@ -79,11 +92,6 @@ function AuthenticatedApp({ auth }: { auth: AuthState }) {
           user={auth.user!}
           onLogout={auth.logout}
           activeSavedCohortId={activeSavedCohortId}
-          filters={filters}
-          onUpdateFilter={handleUpdateFilter}
-          orgOptions={orgOptions}
-          stageOptions={settings?.stages ?? []}
-          diseaseOptions={settings?.diseases ?? []}
         />
       </main>
     </div>

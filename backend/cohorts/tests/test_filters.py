@@ -64,12 +64,12 @@ def _run_filters(params: dict) -> _FakeQS:
 
 def test_org_filter_applied():
     result = _run_filters({"org": "Mayo Clinic"})
-    assert result._filters.get("organization__iexact") == "Mayo Clinic"
+    assert result._filters.get("organization__name__iexact") == "Mayo Clinic"
 
 
 def test_org_filter_not_applied_when_absent():
     result = _run_filters({})
-    assert "organization__iexact" not in result._filters
+    assert "organization__name__iexact" not in result._filters
 
 
 # ── date filter ───────────────────────────────────────────────────────────────

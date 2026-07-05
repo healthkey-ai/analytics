@@ -7,7 +7,7 @@ export interface AuthState {
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
-  signup: (email: string, password: string, name: string, organization: string) => Promise<void>
+  signup: (email: string, password: string, name: string) => Promise<void>
 }
 
 export function useAuth(): AuthState {
@@ -31,8 +31,8 @@ export function useAuth(): AuthState {
     setUser(null)
   }, [])
 
-  const signup = useCallback(async (email: string, password: string, name: string, organization: string) => {
-    const data = await api.signup(email, password, name, organization)
+  const signup = useCallback(async (email: string, password: string, name: string) => {
+    const data = await api.signup(email, password, name)
     setUser(data)
   }, [])
 

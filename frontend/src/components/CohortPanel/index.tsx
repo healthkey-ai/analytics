@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { CohortFilters, FormSettings } from '../../types'
+import { fetchMyOrgs } from '../../api/client'
 import SaveCohortModal from './SaveCohortModal'
 import SavedCohortsList from './SavedCohortsList'
 
@@ -92,6 +93,11 @@ function RangeInputs({ label, minKey, maxKey, filters, onUpdate, step = 1 }: {
 export default function CohortPanel({ filters, settings, onUpdate, onClear, cohortCount, onLoadCohort, activeCohortName, activeCohortId, cohortDirty }: Props) {
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [savedRefresh, setSavedRefresh] = useState(0)
+  const [orgOptions, setOrgOptions] = useState<{ value: string; label: string }[]>([])
+
+  useEffect(() => {
+    fetchMyOrgs().then(setOrgOptions).catch(() => {})
+  }, [])
 
   const sel = <K extends keyof CohortFilters>(key: K) => (filters[key] as string[] | undefined) ?? []
   const upd = <K extends keyof CohortFilters>(key: K) => (v: string[]) =>
@@ -135,6 +141,19 @@ export default function CohortPanel({ filters, settings, onUpdate, onClear, coho
 
       {/* Scrollable filters */}
       <div className="flex-1 overflow-y-auto">
+
+        <Section title="Organization">
+          <select
+            value={filters.org ?? ''}
+            onChange={e => onUpdate('org', e.target.value || undefined)}
+            className="w-full bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500"
+          >
+            <option value="">All</option>
+            {orgOptions.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </Section>
 
         <Section title="Saved Cohorts" defaultOpen={false}>
           <SavedCohortsList onLoad={(f, id, name) => onLoadCohort(f, id, name)} refreshToken={savedRefresh} />

@@ -1,12 +1,31 @@
-# CLAUDE.md — LLM Instructions for analytics
+# CLAUDE.md — LLM Instructions for PRism
 
 This file tells LLMs (Claude, Copilot, etc.) how to work on this codebase consistently.
 
 ---
 
+## Model Selection
+
+**Sonnet** is the default for day-to-day work:
+- Bug fixes and small enhancements
+- New dashboard metrics following established patterns
+- Frontend component changes
+- Test additions and updates
+- Documentation updates
+
+**Opus** for work that requires broad codebase knowledge:
+- Architecture changes (new service layers, data model changes, API design)
+- Broad refactors touching many files across the codebase
+- Bugs or investigations that require understanding the full system to diagnose
+- Any change where getting the context wrong across files would cause a correctness problem
+
+Switch with `/model claude-opus-4-8` or toggle `/fast`.
+
+---
+
 ## Project Overview
 
-**analytics** is a read-only oncology analytics platform that:
+**PRism** is a read-only oncology analytics platform that:
 - Mirrors clinical patient records into a PostgreSQL read model (`PatientInfo`, `managed=False`)
 - Exposes a DRF REST API consumed by a React TypeScript frontend
 - Computes survival curves (KM), treatment patterns, TTNT, and subgroup statistics
@@ -14,7 +33,7 @@ This file tells LLMs (Claude, Copilot, etc.) how to work on this codebase consis
 
 **Key tech:**
 - Backend: Django 5.x, Django REST Framework, PostgreSQL, pytest
-- Frontend: React 18, TypeScript, Tailwind CSS, Recharts
+- Frontend: React 19, TypeScript, Tailwind CSS, Recharts
 - No Django migrations (read-only mirror tables with `managed=False`)
 
 ---
@@ -95,11 +114,11 @@ What to test for a new service function:
 
 ```bash
 # Backend — run from backend/ directory
-cd /Users/adam/analytics/backend
+cd backend
 pytest --ds=analytics_project.test_settings -q
 
-# Frontend
-cd /Users/adam/analytics/frontend && npm test -- --run
+# Frontend — run from frontend/ directory
+cd frontend && npm test -- --run
 ```
 
 ### Run Tests Before Every Push
@@ -108,8 +127,8 @@ cd /Users/adam/analytics/frontend && npm test -- --run
 
 ```bash
 # One-liner from repo root:
-cd /Users/adam/analytics/backend && pytest --ds=analytics_project.test_settings -q \
-  && cd /Users/adam/analytics/frontend && npm test -- --run
+cd backend && pytest --ds=analytics_project.test_settings -q \
+  && cd ../frontend && npm test -- --run
 ```
 
 ---

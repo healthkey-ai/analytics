@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { AuthState } from '../../hooks/useAuth'
-import { fetchOrganizations } from '../../api/client'
 
 interface Props {
   auth: AuthState
@@ -12,26 +11,8 @@ export default function LoginPage({ auth }: Props) {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [organization, setOrganization] = useState('')
-  const [organizations, setOrganizations] = useState<string[]>([])
-  const [orgsLoading, setOrgsLoading] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-
-  useEffect(() => {
-    if (mode === 'signup') {
-      setOrgsLoading(true)
-      fetchOrganizations()
-        .then(orgs => {
-          setOrganizations(orgs)
-          // Default to ABC Foundation; fall back to first org if absent
-          const defaultOrg = orgs.includes('ABC Foundation') ? 'ABC Foundation' : (orgs[0] ?? '')
-          setOrganization(defaultOrg)
-        })
-        .catch(() => setOrganizations([]))
-        .finally(() => setOrgsLoading(false))
-    }
-  }, [mode])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -45,7 +26,7 @@ export default function LoginPage({ auth }: Props) {
       if (mode === 'login') {
         await auth.login(email, password)
       } else {
-        await auth.signup(email, password, name, organization)
+        await auth.signup(email, password, name)
       }
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
@@ -130,28 +111,16 @@ export default function LoginPage({ auth }: Props) {
               </div>
             )}
 
+
             {mode === 'signup' && (
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">
-                  Organization <span className="text-slate-500">(optional)</span>
-                </label>
-                {orgsLoading ? (
-                  <p className="text-xs text-slate-400">Loading organizations…</p>
-                ) : organizations.length === 0 ? (
-                  <p className="text-xs text-slate-400">No organizations available — contact your administrator</p>
-                ) : (
-                  <select
-                    value={organization}
-                    onChange={e => setOrganization(e.target.value)}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500"
-                  >
-                    <option value="">No organization</option>
-                    {organizations.map(org => (
-                      <option key={org} value={org}>{org}</option>
-                    ))}
-                  </select>
-                )}
-              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                This platform provides analytics on a set of synthetic data from fictional foundations for demonstration purposes.
+                For questions, contact{' '}
+                <a href="mailto:support@healthkey.ai" className="text-teal-400 hover:text-teal-300 underline">
+                  support@healthkey.ai
+                </a>
+                .
+              </p>
             )}
 
             {error && (

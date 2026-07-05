@@ -218,7 +218,7 @@ def apply_cohort_filters(request) -> "QuerySet[PatientInfo]":
     # org isolation via an exact-match filter regardless of what org= is passed here.
     org = p.get("org")
     if org:
-        qs = qs.filter(organization__iexact=org)
+        qs = qs.filter(organization__name__iexact=org)
 
     # ── diagnosis date window ─────────────────────────────────────────────────
     date_window = p.get("date")
