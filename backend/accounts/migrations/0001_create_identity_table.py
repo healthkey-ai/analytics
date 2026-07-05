@@ -1,9 +1,9 @@
 """
 Creates the `identity` table if it doesn't already exist.
 
-In production, this table is owned by ctomop which runs first. This migration
+In production, this table is owned by promop which runs first. This migration
 is a no-op in that case (CREATE TABLE IF NOT EXISTS). In standalone/dev
-environments where ctomop hasn't run yet, it creates the table so analytics
+environments where promop hasn't run yet, it creates the table so analytics
 can work independently.
 """
 from django.db import migrations, models
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS identity (
     CONSTRAINT identity_uid_key UNIQUE (uid)
 );
 -- Partial unique index so one email maps to at most one local account.
--- CREATE INDEX IF NOT EXISTS is idempotent; safe to run against ctomop's table.
+-- CREATE INDEX IF NOT EXISTS is idempotent; safe to run against promop's table.
 CREATE UNIQUE INDEX IF NOT EXISTS identity_local_email_uidx
     ON identity (lower(email))
     WHERE issuer = 'urn:local';
@@ -66,7 +66,7 @@ class Migration(migrations.Migration):
         migrations.RunSQL(CREATE_IDENTITY_USER_PERMISSIONS, reverse_sql="DROP TABLE IF EXISTS accounts_identity_user_permissions;"),
         # Register the unmanaged Identity model in Django's migration state so that
         # lazy FK references (e.g. cohorts.SavedCohort.user) can be resolved.
-        # No SQL runs; the table is created above (or already exists via ctomop).
+        # No SQL runs; the table is created above (or already exists via promop).
         migrations.SeparateDatabaseAndState(
             database_operations=[],
             state_operations=[

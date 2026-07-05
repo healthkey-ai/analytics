@@ -7,7 +7,7 @@ Thank you for your interest in contributing. This document covers how to set up 
 ### Prerequisites
 - Python 3.11+
 - Node.js 20+
-- PostgreSQL 15+ (or a CTOMOP-compatible instance)
+- PostgreSQL 15+ (or a PROMOP-compatible instance)
 
 ### Backend
 

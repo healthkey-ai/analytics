@@ -4,6 +4,17 @@ This file tells LLMs (Claude, Copilot, etc.) how to work on this codebase consis
 
 ---
 
+## Model Selection
+
+Default model for this project is **Sonnet**. Switch to **Opus** (`/model claude-opus-4-8` or `/fast`) for:
+- Architectural decisions (new service layer, data model changes, API design)
+- Wide-context refactors touching many files at once
+- Complex debugging requiring deep reasoning across the full codebase
+
+Use Sonnet for everything else: feature additions, bug fixes, tests, frontend work.
+
+---
+
 ## Project Overview
 
 **analytics** is a read-only oncology analytics platform that:

@@ -7,6 +7,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Planned
+
+- **OHDSI Atlas cohort export** — export a saved Prism cohort as an Atlas-compatible Circe JSON definition via `GET /api/cohorts/saved/{id}/export/atlas/`. Enables cohorts defined in Prism's point-and-click UI to be executed in OHDSI tools (PatientLevelPrediction, CohortMethod). Requires a concept mapping layer from PROMOP field values to OMOP vocabulary concept IDs.
+
 ---
 
 ## [1.0.0] — 2026-07-04
@@ -59,7 +63,7 @@ Initial tagged release submitted to the Journal of Open Source Software (JOSS).
 ## 2026-06-06 — Saved Cohorts, Auth & Export (PR #5)
 
 ### Added
-- **User authentication** — Email/password login and signup backed by the shared `identity` table. Session cookie shared with ctomop via `SESSION_COOKIE_DOMAIN=.healthkey.ai` and the same `SECRET_KEY`, enabling SSO between the two apps.
+- **User authentication** — Email/password login and signup backed by the shared `identity` table. Session cookie shared with promop via `SESSION_COOKIE_DOMAIN=.healthkey.ai` and the same `SECRET_KEY`, enabling SSO between the two apps.
 - **Saved cohorts** — Authenticated users can save, name, load, update, and delete cohort filter sets. Maximum 10 cohorts per user.
 - **CSV/JSON export** — Download patient-level data (all fields except PII) from any saved cohort via `GET /api/cohorts/saved/{id}/export/?format=csv|json`.
 - **Cohort dirty tracking** — The UI indicates when a loaded saved cohort has been modified but not re-saved.

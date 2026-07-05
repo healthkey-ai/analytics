@@ -4,7 +4,7 @@
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.XXXXX/status.svg)](https://doi.org/10.21105/joss.XXXXX)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-Real-world evidence analytics for oncology patient cohorts, built on top of [CTOMOP](https://github.com/healthkey-ai/ctomop) (OMOP CDM v6.0).
+Real-world evidence analytics for oncology patient cohorts, built on top of [PROMOP](https://github.com/healthkey-ai/promop) (OMOP CDM v6.0).
 
 ## Overview
 
@@ -39,7 +39,7 @@ Filter patients by:
 | Layer | Technology |
 |---|---|
 | Backend | Django 5 + Django REST Framework |
-| Database | PostgreSQL (OMOP CDM v6.0) via CTOMOP |
+| Database | PostgreSQL (OMOP CDM v6.0) via PROMOP |
 | Frontend | React 19 + TypeScript + Vite |
 | Styling | Tailwind CSS v4 |
 | Charts | Recharts |
@@ -71,7 +71,7 @@ analytics/
 │       │   └── useAnalytics.ts # State management + 400ms debounced API calls
 │       ├── api/client.ts       # Axios client + filter serialization
 │       └── types/index.ts      # Shared TypeScript interfaces
-└── seed_mm_patients.py         # Seeds 100 realistic MM patients into CTOMOP
+└── seed_mm_patients.py         # Seeds 100 realistic MM patients into PROMOP
 ```
 
 ## Getting Started
@@ -133,7 +133,7 @@ gunicorn analytics_project.wsgi:application --bind 0.0.0.0:$PORT
 
 ## Database
 
-The backend connects to a CTOMOP PostgreSQL instance and reads from the `patient_info` denormalized view via an unmanaged Django model. Connection settings live in `backend/analytics_project/settings.py`.
+The backend connects to a PROMOP PostgreSQL instance and reads from the `patient_info` denormalized view via an unmanaged Django model. Connection settings live in `backend/analytics_project/settings.py`.
 
 ## Citing Prism
 

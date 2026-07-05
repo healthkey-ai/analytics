@@ -22,7 +22,7 @@ bibliography: paper.bib
 
 # Summary
 
-Prism is an open-source web application for interactive real-world evidence (RWE) analytics on oncology patient cohorts. It connects to a PostgreSQL database following the CTOMOP schema—an extension of the Observational Medical Outcomes Partnership (OMOP) Common Data Model (CDM) v6.0 [@garza2020]—and provides a point-and-click cohort builder paired with a suite of survival, treatment pattern, and demographic analytics. Analytical computations run server-side in Python, delivering pre-aggregated JSON to a React/TypeScript frontend optimized for clinical researchers without programming experience.
+Prism is an open-source web application for interactive real-world evidence (RWE) analytics on oncology patient cohorts. It connects to a PostgreSQL database following the PROMOP schema—an extension of the Observational Medical Outcomes Partnership (OMOP) Common Data Model (CDM) v6.0 [@garza2020]—and provides a point-and-click cohort builder paired with a suite of survival, treatment pattern, and demographic analytics. Analytical computations run server-side in Python, delivering pre-aggregated JSON to a React/TypeScript frontend optimized for clinical researchers without programming experience.
 
 Built on Django 5 and Django REST Framework, Prism exposes a REST API that accepts cohort filter parameters and returns metrics computed against the live patient dataset. A debounced frontend ensures analytics update within milliseconds of each filter change without overwhelming the backend.
 
@@ -48,7 +48,7 @@ Prism is self-hostable, requires no proprietary software, and exposes a document
 
 # Testing
 
-The backend test suite (pytest, ~2,400 lines across 19 files) covers KM curve correctness, log-rank p-value computation, cohort filter composition, org-scoped queryset logic, and authentication flows. A `_FakeQS` mock pattern allows service functions to be tested without a live database. Frontend component tests use Vitest. Both suites are run via GitHub Actions on every push.
+The backend test suite (pytest, ~2,400 lines across 18 files) covers KM curve correctness, log-rank p-value computation, cohort filter composition, org-scoped queryset logic, and authentication flows. A `_FakeQS` mock pattern allows service functions to be tested without a live database. Frontend component tests use Vitest. Both suites are run via GitHub Actions on every push.
 
 # Availability
 
@@ -56,6 +56,6 @@ Prism is available at [https://github.com/healthkey-ai/prism](https://github.com
 
 # Acknowledgements
 
-Prism builds on the OMOP Common Data Model as implemented in CTOMOP [@ctomop]. Survival analysis uses the SciPy scientific computing library [@virtanen2020]. Outcome probability distributions used for synthetic data generation were drawn from published clinical trial reports including GRIFFIN, MAIA, KarMMa, CARTITUDE-1, and DREAMM-2.
+Prism builds on the OMOP Common Data Model as implemented in PROMOP [@promop]. Survival analysis uses the SciPy scientific computing library [@virtanen2020]. Outcome probability distributions used for synthetic data generation were drawn from published clinical trial reports including GRIFFIN, MAIA, KarMMa, CARTITUDE-1, and DREAMM-2.
 
 # References

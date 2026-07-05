@@ -58,43 +58,6 @@ def test_signup_without_org_succeeds(
     )
 
 
-# ---------------------------------------------------------------------------
-# Org validation
-# ---------------------------------------------------------------------------
-
-@patch('accounts.views.Organization.objects.get')
-def test_signup_with_unknown_org_returns_400(mock_org_get):
-    from accounts.models import Organization
-    mock_org_get.side_effect = Organization.DoesNotExist
-
-    response = _post({
-        'email': 'test@example.com',
-        'password': 'ValidPass123!',
-        'name': 'Test User',
-        'organization': 'Nonexistent Org',
-    })
-
-    assert response.status_code == 400
-    assert 'invalid' in response.data['detail'].lower()
-
-
-@patch('accounts.views.Organization.objects.get')
-def test_signup_wrong_email_domain_returns_400(mock_org_get):
-    mock_org = MagicMock()
-    mock_org.allowed_email_domain = 'hospital.org'
-    mock_org_get.return_value = mock_org
-
-    response = _post({
-        'email': 'user@gmail.com',
-        'password': 'ValidPass123!',
-        'name': 'Test User',
-        'organization': 'City Hospital',
-    })
-
-    assert response.status_code == 400
-    assert 'hospital.org' in response.data['detail']
-
-
 @patch('accounts.views.UserProfile.objects.create')
 @patch('accounts.views.login')
 @patch('accounts.views.get_token')

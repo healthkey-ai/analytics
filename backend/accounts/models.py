@@ -43,7 +43,7 @@ class IdentityManager(BaseUserManager):
 
 class Identity(AbstractBaseUser, PermissionsMixin):
     """
-    Unmanaged model pointing at ctomop's `identity` table.
+    Unmanaged model pointing at promop's `identity` table.
     Both apps share the same DB so sessions and users are shared.
     """
 
