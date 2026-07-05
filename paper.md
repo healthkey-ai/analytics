@@ -28,7 +28,7 @@ Built on Django 5 and Django REST Framework, PRism exposes a REST API that accep
 
 # Statement of Need
 
-Real-world evidence derived from electronic health records and registries is increasingly used to inform drug development, regulatory submissions, and clinical practice guidelines [@sherman2016; @blonde2022]. However, generating RWE analyses typically requires either custom programming expertise or access to expensive commercial platforms. Oncology researchers working with institutional registries often lack both.
+Real-world evidence derived from electronic health records and registries is increasingly used to inform drug development, regulatory submissions, and clinical practice guidelines [@sherman2016; @blonde2018]. However, generating RWE analyses typically requires either custom programming expertise or access to expensive commercial platforms. Oncology researchers working with institutional registries often lack both.
 
 Existing open-source OMOP analytics tools such as ATLAS [@hripcsak2015] focus primarily on observational study design and population-level cohort characterization. PRism complements these tools by providing a purpose-built analytics layer for oncology RWE, with disease-specific survival analyses, treatment sequence visualization, and subgroup stratification designed for clinical investigators rather than data engineers.
 
