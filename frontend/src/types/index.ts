@@ -5,7 +5,6 @@ export interface User {
   is_staff: boolean
   is_premium: boolean
   role: 'user' | 'staff'
-  organization: string
 }
 
 export interface SavedCohort {

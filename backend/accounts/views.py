@@ -105,12 +105,11 @@ def my_orgs_view(request):
 
 def _user_data(user):
     is_premium = getattr(user, "is_premium", False)
-    role = "staff" if user.is_staff else ("premium" if is_premium else "user")
     return {
         "uid":        user.uid,
         "email":      user.email,
         "name":       user.name,
         "is_staff":   user.is_staff,
         "is_premium": is_premium,
-        "role":       role,
+        "role":       "staff" if user.is_staff else "user",
     }
