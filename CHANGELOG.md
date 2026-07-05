@@ -17,7 +17,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Summary
 
-Initial tagged release submitted to the Journal of Open Source Software (JOSS).
+Initial tagged release establishing the v1.0.0 baseline.
 
 ### Features included in this release
 
