@@ -46,6 +46,12 @@ END $$;
 """
 
 
+def backfill_profile_data(apps, schema_editor):
+    schema_editor.execute(BACKFILL_PREMIUM)
+    if schema_editor.connection.vendor == "postgresql":
+        schema_editor.execute(BACKFILL_ORG_ACCESS)
+
+
 class Migration(migrations.Migration):
     """
     Drop the accounts_userprofile table — roles are now managed in PRomop.
@@ -60,8 +66,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(BACKFILL_PREMIUM, reverse_sql=migrations.RunSQL.noop),
-        migrations.RunSQL(BACKFILL_ORG_ACCESS, reverse_sql=migrations.RunSQL.noop),
+        migrations.RunPython(backfill_profile_data, reverse_code=migrations.RunPython.noop),
         migrations.DeleteModel(
             name="UserProfile",
         ),

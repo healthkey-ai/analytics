@@ -35,6 +35,23 @@ Initial tagged release submitted to the Journal of Open Source Software (JOSS).
 
 ---
 
+## [1.0.0] - 2026-07-05
+
+### Added
+- Initial tagged release for Zenodo archiving and DOI minting.
+- Citation metadata via `CITATION.cff` and Zenodo-specific metadata via `.zenodo.json`.
+
+### Changed
+- Frontend package version set to `1.0.0`.
+- Backend test settings now run against local SQLite by default while preserving `DATABASE_URL` override support.
+- Root Python requirements now match backend numerical dependencies used by Kaplan-Meier analytics.
+
+### Fixed
+- Backend test suite now runs from a clean shell without requiring production secrets or local PostgreSQL.
+- Removed stale treatment-pathways tests that referenced a deleted service module.
+
+---
+
 ## 2026-06-08 — KM Enhancements (PR #9)
 
 ### Added

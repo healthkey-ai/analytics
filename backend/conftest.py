@@ -12,7 +12,12 @@ def make_user(db):
     """Factory that creates Identity users. Pass is_premium=True for export-capable users."""
     from accounts.models import Identity
 
-    def _make(email="user@example.com", password="TestPass123!", name="Test User", **kwargs):
+    def _make(
+        email="user@example.com",
+        password="TestPass123!",
+        name="Test User",
+        **kwargs,
+    ):
         return Identity.objects.create_user(email=email, password=password, name=name, **kwargs)
 
     return _make

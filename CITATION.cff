@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+title: "PRISM: Real-world evidence analytics for oncology patient cohorts"
+version: 1.0.0
+date-released: 2026-07-05
+type: software
+license: Apache-2.0
+url: "https://github.com/healthkey-ai/prism"
+repository-code: "https://github.com/healthkey-ai/prism"
+authors:
+  - family-names: Blum
+    given-names: Adam
+    affiliation: HealthKey AI
+    orcid: "https://orcid.org/0009-0009-4985-7615"
+keywords:
+  - real-world evidence
+  - oncology
+  - OMOP
+  - cohort analytics
+  - Django
+  - React

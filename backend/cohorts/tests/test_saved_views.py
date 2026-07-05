@@ -18,12 +18,12 @@ def export_url(pk, fmt="csv"):
 
 @pytest.fixture
 def user(make_user):
-    return make_user(email="owner@example.com")
+    return make_user(email="owner@example.com", is_premium=True)
 
 
 @pytest.fixture
 def other_user(make_user):
-    return make_user(email="other@example.com")
+    return make_user(email="other@example.com", is_premium=True)
 
 
 @pytest.fixture
@@ -44,6 +44,10 @@ def _mock_export_qs(rows):
     mock_qs.__getitem__ = MagicMock(return_value=mock_qs)
     mock_qs.values.return_value = mock_values
     return mock_qs
+
+
+def _mock_export_scope(mock_qs):
+    return patch("cohorts.saved_views.apply_org_scope", return_value=(mock_qs, None))
 
 
 # ── List / Create ────────────────────────────────────────────────────────────
@@ -180,7 +184,8 @@ class TestSavedCohortExport:
     def test_csv_export_returns_csv_content_type(self, api_client, user, cohort):
         api_client.force_authenticate(user=user)
         mock_qs = _mock_export_qs(self._SAMPLE_ROWS)
-        with patch("cohorts.saved_views.apply_cohort_filters", return_value=mock_qs):
+        with patch("cohorts.saved_views.apply_cohort_filters", return_value=mock_qs), \
+             _mock_export_scope(mock_qs):
             resp = api_client.get(export_url(cohort.pk, "csv"))
         assert resp.status_code == 200
         assert "text/csv" in resp["Content-Type"]
@@ -188,7 +193,8 @@ class TestSavedCohortExport:
     def test_csv_export_has_attachment_header(self, api_client, user, cohort):
         api_client.force_authenticate(user=user)
         mock_qs = _mock_export_qs(self._SAMPLE_ROWS)
-        with patch("cohorts.saved_views.apply_cohort_filters", return_value=mock_qs):
+        with patch("cohorts.saved_views.apply_cohort_filters", return_value=mock_qs), \
+             _mock_export_scope(mock_qs):
             resp = api_client.get(export_url(cohort.pk, "csv"))
         assert "attachment" in resp["Content-Disposition"]
         assert "ISS_Stage_I" in resp["Content-Disposition"]
@@ -196,7 +202,8 @@ class TestSavedCohortExport:
     def test_csv_export_contains_header_row(self, api_client, user, cohort):
         api_client.force_authenticate(user=user)
         mock_qs = _mock_export_qs(self._SAMPLE_ROWS)
-        with patch("cohorts.saved_views.apply_cohort_filters", return_value=mock_qs):
+        with patch("cohorts.saved_views.apply_cohort_filters", return_value=mock_qs), \
+             _mock_export_scope(mock_qs):
             resp = api_client.get(export_url(cohort.pk, "csv"))
         content = b"".join(resp.streaming_content).decode()
         assert "id" in content
@@ -205,7 +212,8 @@ class TestSavedCohortExport:
     def test_json_export_returns_list(self, api_client, user, cohort):
         api_client.force_authenticate(user=user)
         mock_qs = _mock_export_qs(self._SAMPLE_ROWS)
-        with patch("cohorts.saved_views.apply_cohort_filters", return_value=mock_qs):
+        with patch("cohorts.saved_views.apply_cohort_filters", return_value=mock_qs), \
+             _mock_export_scope(mock_qs):
             resp = api_client.get(export_url(cohort.pk, "json"))
         assert resp.status_code == 200
         data = json.loads(resp.content)
@@ -215,7 +223,8 @@ class TestSavedCohortExport:
     def test_export_empty_cohort_returns_empty_csv(self, api_client, user, cohort):
         api_client.force_authenticate(user=user)
         mock_qs = _mock_export_qs([])
-        with patch("cohorts.saved_views.apply_cohort_filters", return_value=mock_qs):
+        with patch("cohorts.saved_views.apply_cohort_filters", return_value=mock_qs), \
+             _mock_export_scope(mock_qs):
             resp = api_client.get(export_url(cohort.pk, "csv"))
         assert resp.status_code == 200
 

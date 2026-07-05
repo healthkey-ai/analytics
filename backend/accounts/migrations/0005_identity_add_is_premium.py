@@ -18,6 +18,12 @@ ALTER TABLE identity
 """
 
 
+def add_is_premium_column(apps, schema_editor):
+    if schema_editor.connection.vendor == "sqlite":
+        return
+    schema_editor.execute(ADD_COLUMN)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -27,7 +33,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.SeparateDatabaseAndState(
             database_operations=[
-                migrations.RunSQL(ADD_COLUMN, reverse_sql=migrations.RunSQL.noop),
+                migrations.RunPython(add_is_premium_column, reverse_code=migrations.RunPython.noop),
             ],
             state_operations=[
                 migrations.AddField(
