@@ -16,7 +16,7 @@ class SourceOrganization(models.Model):
 
 
 class PatientInfo(models.Model):
-    """Read-only mirror of ctomop.patient_info. managed=False — no migrations."""
+    """Read-only mirror of promop.patient_info. managed=False — no migrations."""
 
     # demographics
     patient_age = models.IntegerField(null=True)

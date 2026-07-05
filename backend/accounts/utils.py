@@ -4,8 +4,6 @@ from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import UserProfile
-
 
 _NO_ORG_RESPONSE = Response(
     {"detail": "No organisation assigned. Contact your administrator."},
@@ -62,14 +60,6 @@ def get_visible_org_names(user) -> list[str]:
 
     visible: set[str] = public_names | direct_names | group_org_names
 
-    try:
-        profile = user.profile
-    except UserProfile.DoesNotExist:
-        profile = None
-
-    if profile and profile.organization:
-        visible.add(profile.organization)
-
     # ── org-to-org trusts ─────────────────────────────────────────────────────
     trust_base_names = [name for name in visible if name]
     if trust_base_names:
@@ -105,14 +95,6 @@ def apply_org_scope(qs, user):
                                org and any trust-granted orgs.
     """
     if getattr(user, "is_staff", False) is True:
-        return qs, None  # staff see everything
-
-    try:
-        profile = user.profile
-    except UserProfile.DoesNotExist:
-        profile = None
-
-    if profile and profile.role == UserProfile.ROLE_STAFF:
         return qs, None  # staff see everything
 
     visible = get_visible_org_names(user)

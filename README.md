@@ -1,6 +1,10 @@
-# Analytics Platform
+# PRism
 
-Real-world evidence analytics for oncology patient cohorts, built on top of [CTOMOP](https://github.com/healthkey-ai/ctomop) (OMOP CDM v6.0).
+[![Tests](https://github.com/healthkey-ai/prism/actions/workflows/test.yml/badge.svg)](https://github.com/healthkey-ai/prism/actions/workflows/test.yml)
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.XXXXX/status.svg)](https://doi.org/10.21105/joss.XXXXX)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
+Real-world evidence analytics for oncology patient cohorts, built on top of [PROMOP](https://github.com/healthkey-ai/promop) (OMOP CDM 5.4).
 
 ## Overview
 
@@ -10,7 +14,7 @@ Select a patient cohort using 20+ clinical criteria, then instantly explore outc
 
 ### Cohort Builder
 Filter patients by:
-- Disease (Multiple Myeloma, Breast Cancer)
+- Disease (Multiple Myeloma, Breast Cancer, Follicular Lymphoma)
 - ISS stage, ECOG performance status
 - Age range, gender, ethnicity, geographic region
 - Cytogenetic markers (del17p, t(4;14), t(14;16), high-risk flag, TP53 disruption)
@@ -35,7 +39,7 @@ Filter patients by:
 | Layer | Technology |
 |---|---|
 | Backend | Django 5 + Django REST Framework |
-| Database | PostgreSQL (OMOP CDM v6.0) via CTOMOP |
+| Database | PostgreSQL (OMOP CDM 5.4) via PROMOP |
 | Frontend | React 19 + TypeScript + Vite |
 | Styling | Tailwind CSS v4 |
 | Charts | Recharts |
@@ -67,7 +71,7 @@ analytics/
 │       │   └── useAnalytics.ts # State management + 400ms debounced API calls
 │       ├── api/client.ts       # Axios client + filter serialization
 │       └── types/index.ts      # Shared TypeScript interfaces
-└── seed_mm_patients.py         # Seeds 100 realistic MM patients into CTOMOP
+└── seed_mm_patients.py         # Seeds 100 realistic MM patients into PROMOP
 ```
 
 ## Getting Started
@@ -98,13 +102,21 @@ The app is available at `http://localhost:5173/`. API requests to `/api/*` are p
 
 ### Seeding Sample Data
 
-To populate 100 realistic Multiple Myeloma patients with clinically plausible treatment histories and outcome distributions:
+The recommended way to populate a PROMOP database with synthetic oncology patients is via PROMOP's built-in FHIR pipeline. See the [PROMOP quickstart guide](https://github.com/healthkey-ai/promop/blob/dev/docs/quickstart.md) for full instructions. In short:
 
 ```bash
-python seed_mm_patients.py
+# Generate a synthetic FHIR bundle
+python manage.py generate_fhir_bundle --patients 100 --disease MM
+
+# Import the bundle into the PROMOP database
+python manage.py import_fhir_bundle bundle.json
 ```
 
-Outcome probabilities are drawn from published trial data (GRIFFIN, MAIA, KarMMa, CARTITUDE-1, DREAMM-2, etc.) and risk-adjusted for high-risk cytogenetics.
+Alternatively, the repository includes a standalone seed script for 100 Multiple Myeloma patients with clinically plausible treatment histories and outcome distributions drawn from published trial data (GRIFFIN, MAIA, KarMMa, CARTITUDE-1, DREAMM-2, etc.), risk-adjusted for high-risk cytogenetics:
+
+```bash
+DATABASE_URL="postgresql://..." python seed_mm_patients.py
+```
 
 ## Deploying to Render
 
@@ -129,4 +141,10 @@ gunicorn analytics_project.wsgi:application --bind 0.0.0.0:$PORT
 
 ## Database
 
-The backend connects to a CTOMOP PostgreSQL instance and reads from the `patient_info` denormalized view via an unmanaged Django model. Connection settings live in `backend/analytics_project/settings.py`.
+The backend connects to a PROMOP PostgreSQL instance and reads from the `patient_info` denormalized view via an unmanaged Django model. Connection settings live in `backend/analytics_project/settings.py`.
+
+## Citing PRism
+
+If you use PRism in research, please cite:
+
+> Blum, A. (2026). PRism: An Open-Source Real-World Evidence Analytics Platform for Oncology Patient Cohorts. *Journal of Open Source Software*. https://doi.org/10.21105/joss.XXXXX

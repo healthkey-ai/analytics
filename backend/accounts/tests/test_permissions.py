@@ -1,40 +1,29 @@
 """Tests for IsPremiumOrStaff permission."""
-import pytest
 from unittest.mock import MagicMock
-from accounts.models import UserProfile
 from accounts.permissions import IsPremiumOrStaff
 
 
-def _make_request(role):
-    profile = MagicMock()
-    profile.role = role
-    profile.ROLE_PREMIUM = UserProfile.ROLE_PREMIUM
-    profile.ROLE_STAFF = UserProfile.ROLE_STAFF
+def _make_request(is_premium=False, is_staff=False, is_authenticated=True):
     user = MagicMock()
-    user.profile = profile
+    user.is_authenticated = is_authenticated
+    user.is_premium = is_premium
+    user.is_staff = is_staff
     request = MagicMock()
     request.user = user
     return request
 
 
-def test_user_role_denied():
-    perm = IsPremiumOrStaff()
-    assert perm.has_permission(_make_request(UserProfile.ROLE_USER), None) is False
+def test_plain_user_denied():
+    assert IsPremiumOrStaff().has_permission(_make_request(), None) is False
 
 
-def test_premium_role_allowed():
-    perm = IsPremiumOrStaff()
-    assert perm.has_permission(_make_request(UserProfile.ROLE_PREMIUM), None) is True
+def test_premium_user_allowed():
+    assert IsPremiumOrStaff().has_permission(_make_request(is_premium=True), None) is True
 
 
-def test_staff_role_allowed():
-    perm = IsPremiumOrStaff()
-    assert perm.has_permission(_make_request(UserProfile.ROLE_STAFF), None) is True
+def test_staff_user_allowed():
+    assert IsPremiumOrStaff().has_permission(_make_request(is_staff=True), None) is True
 
 
-def test_no_profile_denied():
-    perm = IsPremiumOrStaff()
-    request = MagicMock()
-    request.user.profile = MagicMock(side_effect=UserProfile.DoesNotExist)
-    type(request.user).profile = property(lambda self: (_ for _ in ()).throw(UserProfile.DoesNotExist()))
-    assert perm.has_permission(request, None) is False
+def test_unauthenticated_denied():
+    assert IsPremiumOrStaff().has_permission(_make_request(is_authenticated=False), None) is False

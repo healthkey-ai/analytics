@@ -72,7 +72,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 AUTHENTICATION_BACKENDS = ["accounts.backends.EmailBackend"]
 
-# Session config — shared with ctomop via same SECRET_KEY + DB
+# Session config — shared with promop via same SECRET_KEY + DB
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_COOKIE_DOMAIN = os.environ.get("SESSION_COOKIE_DOMAIN")  # set to .healthkey.ai on Render
 SESSION_COOKIE_SECURE = not DEBUG

@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework import status
 
-from .models import Identity, Organization, UserProfile
+from .models import Identity, Organization
 
 
 @api_view(["POST"])
@@ -53,7 +53,6 @@ def signup_view(request):
     try:
         with transaction.atomic():
             user = Identity.objects.create_user(email=email, password=password, name=name)
-            UserProfile.objects.create(user=user, organization="", role=UserProfile.ROLE_USER)
     except IntegrityError:
         return Response({"detail": "An account with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -90,12 +89,7 @@ def my_orgs_view(request):
     from patients.models import PatientInfo
     from accounts.utils import get_visible_org_names
 
-    try:
-        profile = request.user.profile
-    except UserProfile.DoesNotExist:
-        return Response([])
-
-    if profile.role == UserProfile.ROLE_STAFF:
+    if request.user.is_staff:
         orgs = (
             PatientInfo.objects
             .exclude(organization__isnull=True)
@@ -110,18 +104,12 @@ def my_orgs_view(request):
 
 
 def _user_data(user):
-    try:
-        profile = user.profile
-        role         = profile.role
-        organization = profile.organization
-    except UserProfile.DoesNotExist:
-        role         = UserProfile.ROLE_USER
-        organization = ""
+    is_premium = getattr(user, "is_premium", False)
     return {
-        "uid":          user.uid,
-        "email":        user.email,
-        "name":         user.name,
-        "is_staff":     user.is_staff,
-        "role":         role,
-        "organization": organization,
+        "uid":        user.uid,
+        "email":      user.email,
+        "name":       user.name,
+        "is_staff":   user.is_staff,
+        "is_premium": is_premium,
+        "role":       "staff" if user.is_staff else "user",
     }

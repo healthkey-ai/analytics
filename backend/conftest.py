@@ -9,7 +9,7 @@ def api_client():
 
 @pytest.fixture
 def make_user(db):
-    """Factory that creates Identity users. Accepts keyword overrides."""
+    """Factory that creates Identity users. Pass is_premium=True for export-capable users."""
     from accounts.models import Identity
 
     def _make(email="user@example.com", password="TestPass123!", name="Test User", **kwargs):

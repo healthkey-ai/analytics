@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Seed 100 realistic Multiple Myeloma patients into the CTOMOP dev database.
+Seed 100 realistic Multiple Myeloma patients into the PROMOP dev database.
 Person IDs 300-399.
 
 Therapy names are taken verbatim from ~/exact/trials/services/therapies_mapper.py.
@@ -31,15 +31,13 @@ Outcome weight sources:
   Venetoclax mono:      real-world t(11;14)
 """
 
+import os
 import random
 import json
 import psycopg2
 from datetime import date, timedelta
 
-DB_URL = (
-    "postgresql://ctomop_dev_user:IehVp8TGNcelOymGcjtfL6Up6W63DOf2"
-    "@dpg-d7pqr35ckfvc73bm0lc0-a.oregon-postgres.render.com/ctomop_dev"
-)
+DB_URL = os.environ["DATABASE_URL"]
 
 random.seed(42)
 
