@@ -28,6 +28,46 @@ class TestSignupView:
         resp = api_client.post(SIGNUP_URL, {"email": "dup@example.com", "password": "StrongPass123!"})
         assert resp.status_code == 400
 
+    def test_unusable_promop_placeholder_is_claimed(self, api_client, make_user):
+        placeholder = make_user(email="invited@example.com", password=None, name="")
+        assert not placeholder.has_usable_password()
+
+        resp = api_client.post(
+            SIGNUP_URL,
+            {
+                "email": "invited@example.com",
+                "password": "StrongPass123!",
+                "name": "Invited User",
+            },
+        )
+
+        assert resp.status_code == 201
+        placeholder.refresh_from_db()
+        assert resp.data["uid"] == placeholder.uid
+        assert placeholder.name == "Invited User"
+        assert placeholder.check_password("StrongPass123!")
+
+    def test_claimed_placeholder_can_log_in(self, api_client, make_user):
+        placeholder = make_user(email="login-invited@example.com", password=None)
+
+        signup_resp = api_client.post(
+            SIGNUP_URL,
+            {
+                "email": "login-invited@example.com",
+                "password": "StrongPass123!",
+                "name": "Login Invited",
+            },
+        )
+        assert signup_resp.status_code == 201
+
+        login_resp = api_client.post(
+            LOGIN_URL,
+            {"email": "login-invited@example.com", "password": "StrongPass123!"},
+        )
+
+        assert login_resp.status_code == 200
+        assert login_resp.data["uid"] == placeholder.uid
+
     def test_missing_email_rejected(self, api_client):
         resp = api_client.post(SIGNUP_URL, {"password": "StrongPass123!"})
         assert resp.status_code == 400

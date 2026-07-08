@@ -12,6 +12,28 @@ from rest_framework import status
 from .models import Identity, Organization
 
 
+def _create_or_claim_signup_identity(email, password, name):
+    local_identities = list(
+        Identity.objects.select_for_update()
+        .filter(email__iexact=email, issuer="urn:local")
+        .order_by("id")
+    )
+
+    for identity in local_identities:
+        if identity.has_usable_password():
+            raise IntegrityError
+
+    if local_identities:
+        identity = local_identities[0]
+        identity.email = Identity.objects.normalize_email(email)
+        identity.name = name
+        identity.set_password(password)
+        identity.save(update_fields=["email", "name", "password"])
+        return identity
+
+    return Identity.objects.create_user(email=email, password=password, name=name)
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @throttle_classes([AnonRateThrottle])
@@ -52,7 +74,7 @@ def signup_view(request):
 
     try:
         with transaction.atomic():
-            user = Identity.objects.create_user(email=email, password=password, name=name)
+            user = _create_or_claim_signup_identity(email, password, name)
     except IntegrityError:
         return Response({"detail": "An account with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
 
