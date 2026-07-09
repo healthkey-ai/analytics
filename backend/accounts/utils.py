@@ -60,16 +60,6 @@ def get_visible_org_names(user) -> list[str]:
 
     visible: set[str] = public_names | direct_names | group_org_names
 
-    # ── org-to-org trusts ─────────────────────────────────────────────────────
-    trust_base_names = [name for name in visible if name]
-    if trust_base_names:
-        for name in PromopOrgTrust.objects.filter(
-            trusted_org__name__in=trust_base_names,
-            trusted_org__is_active=True,
-            granting_org__is_active=True,
-        ).values_list("granting_org__name", flat=True):
-            visible.add(name)
-
     # ── domain trusts ─────────────────────────────────────────────────────────
     if "@" in email:
         user_domain = email.split("@")[1].lower()
@@ -78,6 +68,25 @@ def get_visible_org_names(user) -> list[str]:
             granting_org__is_active=True,
         ).values_list("granting_org__name", flat=True):
             visible.add(name)
+
+    # ── org-to-org trusts ─────────────────────────────────────────────────────
+    # Domain access can grant access to an umbrella org; expand after domain
+    # resolution and repeat until no newly trusted orgs appear.
+    while True:
+        trust_base_names = sorted(name for name in visible if name)
+        if not trust_base_names:
+            break
+        trusted_names = set(
+            PromopOrgTrust.objects.filter(
+                trusted_org__name__in=trust_base_names,
+                trusted_org__is_active=True,
+                granting_org__is_active=True,
+            ).values_list("granting_org__name", flat=True)
+        )
+        new_names = trusted_names - visible
+        if not new_names:
+            break
+        visible.update(new_names)
 
     return sorted(visible)
 
