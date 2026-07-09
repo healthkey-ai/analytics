@@ -30,10 +30,10 @@ def _mock_user(email='test@example.com'):
 @patch('accounts.views.login')
 @patch('accounts.views.get_token')
 @patch('accounts.views.validate_password')
-@patch('accounts.views.Identity.objects.create_user')
+@patch('accounts.views._create_or_claim_signup_identity')
 @patch('accounts.views.transaction.atomic', _noop_atomic)
-def test_signup_succeeds(mock_create_user, mock_validate, mock_get_token, mock_login):
-    mock_create_user.return_value = _mock_user()
+def test_signup_succeeds(mock_create_or_claim, mock_validate, mock_get_token, mock_login):
+    mock_create_or_claim.return_value = _mock_user()
     response = _post({
         'email': 'test@example.com',
         'password': 'ValidPass123!',
@@ -45,10 +45,10 @@ def test_signup_succeeds(mock_create_user, mock_validate, mock_get_token, mock_l
 @patch('accounts.views.login')
 @patch('accounts.views.get_token')
 @patch('accounts.views.validate_password')
-@patch('accounts.views.Identity.objects.create_user')
+@patch('accounts.views._create_or_claim_signup_identity')
 @patch('accounts.views.transaction.atomic', _noop_atomic)
-def test_signup_response_includes_role(mock_create_user, mock_validate, mock_get_token, mock_login):
-    mock_create_user.return_value = _mock_user()
+def test_signup_response_includes_role(mock_create_or_claim, mock_validate, mock_get_token, mock_login):
+    mock_create_or_claim.return_value = _mock_user()
     response = _post({
         'email': 'test@example.com',
         'password': 'ValidPass123!',

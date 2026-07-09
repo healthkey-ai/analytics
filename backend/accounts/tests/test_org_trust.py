@@ -136,6 +136,30 @@ def test_domain_trust_includes_granting_org(MockOrg, MockTrust):
 
 @patch('accounts.promop_models.PromopOrgTrust')
 @patch('accounts.promop_models.PromopOrganization')
+def test_domain_trusted_umbrella_org_expands_org_to_org_trusts(MockOrg, MockTrust):
+    MockOrg.objects.filter.return_value.values_list.return_value = []
+
+    def trust_filter(**kwargs):
+        qs = MagicMock()
+        if kwargs.get('trusted_domain__iexact') == 'healthtree.org':
+            qs.values_list.return_value = ['HealthTree Trust']
+        elif kwargs.get('trusted_org__name__in') == ['HealthTree Trust']:
+            qs.values_list.return_value = ['ABC Foundation', 'BBC Foundation']
+        elif kwargs.get('trusted_org__name__in') == ['ABC Foundation', 'BBC Foundation', 'HealthTree Trust']:
+            qs.values_list.return_value = ['ABC Foundation', 'BBC Foundation']
+        else:
+            qs.values_list.return_value = []
+        return qs
+
+    MockTrust.objects.filter.side_effect = trust_filter
+
+    result = get_visible_org_names(_make_user(email='analyst@healthtree.org'))
+
+    assert result == ['ABC Foundation', 'BBC Foundation', 'HealthTree Trust']
+
+
+@patch('accounts.promop_models.PromopOrgTrust')
+@patch('accounts.promop_models.PromopOrganization')
 def test_no_email_skips_domain_trust(MockOrg, MockTrust):
     own = _promop_org('Clinic X')
     MockOrg.objects.get.return_value = own
