@@ -147,10 +147,10 @@ class TestFormSettingsDiseaseCounts:
 
     def test_stage_options_use_actual_db_values_when_present(self, api_client):
         rows = [{"disease": "Breast Cancer", "cnt": 20}]
-        with _patch_pi(rows, stages=["Stage IIA", "Stage IIIB"]):
+        with _patch_pi(rows, stages=["Stage IIA", "Stage 2 (qualifier value)", "IIIB"]):
             resp = api_client.get(FORM_SETTINGS_URL + "?disease=Breast+Cancer")
         assert resp.status_code == 200
-        assert resp.data["stages"] == ["Stage IIA", "Stage IIIB"]
+        assert resp.data["stages"] == ["Stage II", "Stage IIA", "Stage IIIB"]
 
     def test_single_disease_count_equals_total_patients(self, api_client):
         rows = [{"disease": "Multiple Myeloma", "cnt": 123}]
