@@ -1,8 +1,11 @@
 """Shared utilities for organisation-scoped querysets."""
+import logging
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework import status
+
+logger = logging.getLogger(__name__)
 
 
 _NO_ORG_RESPONSE = Response(
@@ -72,7 +75,8 @@ def get_visible_org_names(user) -> list[str]:
     # ── org-to-org trusts ─────────────────────────────────────────────────────
     # Domain access can grant access to an umbrella org; expand after domain
     # resolution and repeat until no newly trusted orgs appear.
-    while True:
+    _MAX_TRUST_DEPTH = 10
+    for _depth in range(_MAX_TRUST_DEPTH):
         trust_base_names = sorted(name for name in visible if name)
         if not trust_base_names:
             break
@@ -87,6 +91,11 @@ def get_visible_org_names(user) -> list[str]:
         if not new_names:
             break
         visible.update(new_names)
+    else:
+        logger.warning(
+            "get_visible_org_names: org-trust expansion hit depth limit (%d) for user email domain",
+            _MAX_TRUST_DEPTH,
+        )
 
     return sorted(visible)
 

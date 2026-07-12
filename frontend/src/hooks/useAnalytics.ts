@@ -31,8 +31,12 @@ export function useAnalytics() {
 
   // Load form settings when disease or org changes
   useEffect(() => {
+    let cancelled = false
     const disease = filters.disease ?? DEFAULT_DISEASE
-    fetchFormSettings(disease, filters.org).then(setSettings).catch(() => {})
+    fetchFormSettings(disease, filters.org)
+      .then(s => { if (!cancelled) setSettings(s) })
+      .catch(err => { if (!cancelled) console.error('Failed to load form settings', err) })
+    return () => { cancelled = true }
   }, [filters.disease, filters.org])
 
   // Auto-select the disease with the most patients when org changes
@@ -43,11 +47,12 @@ export function useAnalytics() {
     if (!org) return  // org cleared — don't change disease
 
     fetchFormSettings(DEFAULT_DISEASE, org).then(s => {
-      const counts = s.disease_counts
-      if (!counts || Object.keys(counts).length === 0) return
-      const topDisease = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0]
+      const topDisease = s.diseases[0]  // backend already sorts by count desc
+      if (!topDisease) return
       setFilters(prev => ({ ...prev, ...DISEASE_SPECIFIC_FIELDS, disease: topDisease }))
-    }).catch(() => {})
+    }).catch((err) => {
+      console.error('Failed to load form settings for org auto-select', err)
+    })
   }, [filters.org])
 
   // Debounce metrics fetch when filters change

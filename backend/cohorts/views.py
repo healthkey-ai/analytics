@@ -1,4 +1,5 @@
 from django.db.models import Count, Q
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -172,6 +173,15 @@ def form_settings(request):
     """Return dropdown options for the cohort filter panel."""
     disease = request.query_params.get("disease", "Multiple Myeloma")
     org = request.query_params.get("org", None)
+
+    # Org-scoped queries expose per-org patient counts — require auth and visibility
+    if org:
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+        from accounts.utils import get_visible_org_names
+        if org not in get_visible_org_names(request.user):
+            return Response({"detail": "Organisation not found."}, status=status.HTTP_403_FORBIDDEN)
+
     disease_config = THERAPY_MAP.get(disease, THERAPY_MAP["Multiple Myeloma"])
 
     def _normalize_disease(name):
