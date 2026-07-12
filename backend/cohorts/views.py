@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from cohorts.stage_utils import normalize_stage_label
 from patients.models import PatientInfo
 
 
@@ -200,12 +201,13 @@ def form_settings(request):
     races = sorted(
         qs.exclude(race__isnull=True).values_list("race", flat=True).distinct()
     )
-    stages = sorted(
+    raw_stages = (
         qs.exclude(stage__isnull=True)
           .exclude(stage="")
           .values_list("stage", flat=True)
           .distinct()
     )
+    stages = sorted({normalize_stage_label(stage, disease) for stage in raw_stages if stage})
 
     # Compute patient counts per normalized disease name (scoped to org if provided)
     base_qs = PatientInfo.objects.exclude(disease__isnull=True)

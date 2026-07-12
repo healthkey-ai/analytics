@@ -1,4 +1,4 @@
-"""Tests for apply_cohort_filters org and date params."""
+"""Tests for apply_cohort_filters org, date, and stage alias params."""
 import datetime
 from unittest.mock import patch, MagicMock
 
@@ -39,7 +39,11 @@ class _FakeQS:
 def _make_request(params: dict):
     """Build a minimal request-like object with QueryDict-backed query_params."""
     qd = QueryDict(mutable=True)
-    qd.update(params)
+    for key, value in params.items():
+        if isinstance(value, list):
+            qd.setlist(key, value)
+        else:
+            qd[key] = value
     req = MagicMock()
     req.query_params = qd
     return req
@@ -70,6 +74,16 @@ def test_org_filter_applied():
 def test_org_filter_not_applied_when_absent():
     result = _run_filters({})
     assert "organization__name__iexact" not in result._filters
+
+
+def test_breast_cancer_stage_filter_expands_qualifier_aliases():
+    result = _run_filters({"disease": "Breast Cancer", "stage": ["II"]})
+    assert result._filters.get("stage__in") == ["Stage II", "Stage 2 (qualifier value)"]
+
+
+def test_non_breast_stage_filter_is_not_rewritten():
+    result = _run_filters({"disease": "Multiple Myeloma", "stage": ["ISS Stage II"]})
+    assert result._filters.get("stage__in") == ["ISS Stage II"]
 
 
 # ── date filter ───────────────────────────────────────────────────────────────
