@@ -30,10 +30,11 @@ class _FakePatientQS:
          → used for disease_counts; __iter__ yields {"disease": ..., "cnt": ...} rows
     """
 
-    def __init__(self, disease_rows=None, regions=None, races=None):
+    def __init__(self, disease_rows=None, regions=None, races=None, stages=None):
         self._disease_rows = disease_rows or []
         self._regions = regions or []
         self._races = races or []
+        self._stages = stages or []
 
     def filter(self, *args, **kwargs):
         return self
@@ -53,6 +54,8 @@ class _FakePatientQS:
             return _ChainableList(self._regions)
         if field == "race":
             return _ChainableList(self._races)
+        if field == "stage":
+            return _ChainableList(self._stages)
         return _ChainableList([])
 
     def values(self, *fields):
@@ -66,9 +69,9 @@ class _FakePatientQS:
         return iter(self._disease_rows)
 
 
-def _patch_pi(disease_rows, regions=None, races=None):
+def _patch_pi(disease_rows, regions=None, races=None, stages=None):
     """Return a context manager that patches PatientInfo in cohorts.views."""
-    fake = _FakePatientQS(disease_rows, regions or [], races or [])
+    fake = _FakePatientQS(disease_rows, regions or [], races or [], stages or [])
     mock_pi = MagicMock()
     mock_pi.objects.filter.return_value = fake
     mock_pi.objects.exclude.return_value = fake
@@ -135,6 +138,13 @@ class TestFormSettingsDiseaseCounts:
         for field in ("diseases", "disease_counts", "stages", "outcome_options",
                       "regions", "race_options"):
             assert field in resp.data, f"Missing field in response: {field}"
+
+    def test_stage_options_use_actual_db_values_when_present(self, api_client):
+        rows = [{"disease": "Breast Cancer", "cnt": 20}]
+        with _patch_pi(rows, stages=["Stage IIA", "Stage IIIB"]):
+            resp = api_client.get(FORM_SETTINGS_URL + "?disease=Breast+Cancer")
+        assert resp.status_code == 200
+        assert resp.data["stages"] == ["Stage IIA", "Stage IIIB"]
 
     def test_single_disease_count_equals_total_patients(self, api_client):
         rows = [{"disease": "Multiple Myeloma", "cnt": 123}]
