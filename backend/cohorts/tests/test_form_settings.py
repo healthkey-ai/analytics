@@ -13,6 +13,15 @@ import pytest
 FORM_SETTINGS_URL = "/api/form-settings/"
 
 
+@pytest.fixture(autouse=True)
+def disable_form_settings_throttling(settings):
+    settings.REST_FRAMEWORK = {
+        **settings.REST_FRAMEWORK,
+        "DEFAULT_THROTTLE_CLASSES": [],
+        "DEFAULT_THROTTLE_RATES": {},
+    }
+
+
 class _ChainableList(list):
     """A list that supports the .distinct() queryset chain."""
 
