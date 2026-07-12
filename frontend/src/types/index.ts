@@ -59,6 +59,7 @@ export interface CohortFilters {
 
 export interface FormSettings {
   diseases: string[]
+  disease_counts?: Record<string, number>
   stages: string[]
   first_line_therapies: string[]
   second_line_therapies: string[]

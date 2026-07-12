@@ -165,9 +165,11 @@ export default function CohortPanel({ filters, settings, onUpdate, onClear, coho
             onChange={e => onUpdate('disease', e.target.value)}
             className="w-full bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500"
           >
-            {(settings?.diseases ?? ['Multiple Myeloma', 'Breast Cancer']).map(d => (
-              <option key={d} value={d}>{d}</option>
-            ))}
+            {(settings?.diseases ?? ['Multiple Myeloma', 'Breast Cancer']).map(d => {
+              const count = settings?.disease_counts?.[d]
+              const label = count !== undefined ? `${d} (${count.toLocaleString()})` : d
+              return <option key={d} value={d}>{label}</option>
+            })}
           </select>
         </Section>
 

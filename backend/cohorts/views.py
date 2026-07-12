@@ -1,4 +1,5 @@
-from django.db.models import Q
+from django.db.models import Count, Q
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -171,31 +172,51 @@ THERAPY_MAP = {
 def form_settings(request):
     """Return dropdown options for the cohort filter panel."""
     disease = request.query_params.get("disease", "Multiple Myeloma")
+    org = request.query_params.get("org", None)
+
+    # Org-scoped queries expose per-org patient counts — require auth and visibility
+    if org:
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+        from accounts.utils import get_visible_org_names
+        if org not in get_visible_org_names(request.user):
+            return Response({"detail": "Organisation not found."}, status=status.HTTP_403_FORBIDDEN)
+
     disease_config = THERAPY_MAP.get(disease, THERAPY_MAP["Multiple Myeloma"])
 
-    # Pull distinct values actually present in the DB for this disease
-    qs = PatientInfo.objects.filter(disease__icontains=disease)
-    regions = sorted(
-        qs.exclude(region__isnull=True).values_list("region", flat=True).distinct()
-    )
-    races = sorted(
-        qs.exclude(race__isnull=True).values_list("race", flat=True).distinct()
-    )
     def _normalize_disease(name):
         """Collapse FHIR coding artifacts (e.g. 'ER|ERBB2 Breast cancer') into canonical names."""
         if "breast cancer" in name.lower():
             return "Breast Cancer"
         return name
 
-    raw_diseases = (
-        PatientInfo.objects.exclude(disease__isnull=True)
-        .values_list("disease", flat=True)
-        .distinct()
+    # Pull distinct values actually present in the DB for this disease (scoped to org)
+    qs = PatientInfo.objects.filter(disease__icontains=disease)
+    if org:
+        qs = qs.filter(organization__name__iexact=org)
+    regions = sorted(
+        qs.exclude(region__isnull=True).values_list("region", flat=True).distinct()
     )
-    diseases = sorted(set(_normalize_disease(d) for d in raw_diseases))
+    races = sorted(
+        qs.exclude(race__isnull=True).values_list("race", flat=True).distinct()
+    )
+
+    # Compute patient counts per normalized disease name (scoped to org if provided)
+    base_qs = PatientInfo.objects.exclude(disease__isnull=True)
+    if org:
+        base_qs = base_qs.filter(organization__name__iexact=org)
+
+    disease_counts: dict[str, int] = {}
+    for row in base_qs.values("disease").annotate(cnt=Count("id")):
+        normalized = _normalize_disease(row["disease"])
+        disease_counts[normalized] = disease_counts.get(normalized, 0) + row["cnt"]
+
+    # Sort diseases by patient count descending
+    diseases = sorted(disease_counts.keys(), key=lambda d: -disease_counts[d])
 
     return Response({
         "diseases": diseases,
+        "disease_counts": disease_counts,
         **disease_config,
         "outcome_options": OUTCOME_OPTIONS,
         "regions": regions,

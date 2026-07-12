@@ -47,8 +47,10 @@ function toParams(filters: CohortFilters): URLSearchParams {
   return p
 }
 
-export async function fetchFormSettings(disease: string): Promise<FormSettings> {
-  const { data } = await api.get<FormSettings>(`/form-settings/?disease=${encodeURIComponent(disease)}`)
+export async function fetchFormSettings(disease: string, org?: string): Promise<FormSettings> {
+  const params = new URLSearchParams({ disease })
+  if (org) params.set('org', org)
+  const { data } = await api.get<FormSettings>(`/form-settings/?${params}`)
   return data
 }
 
