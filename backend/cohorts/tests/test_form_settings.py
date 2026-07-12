@@ -14,12 +14,9 @@ FORM_SETTINGS_URL = "/api/form-settings/"
 
 
 @pytest.fixture(autouse=True)
-def disable_form_settings_throttling(settings):
-    settings.REST_FRAMEWORK = {
-        **settings.REST_FRAMEWORK,
-        "DEFAULT_THROTTLE_CLASSES": [],
-        "DEFAULT_THROTTLE_RATES": {},
-    }
+def disable_form_settings_throttling(monkeypatch):
+    from cohorts.views import form_settings
+    monkeypatch.setattr(form_settings.cls, "throttle_classes", [])
 
 
 class _ChainableList(list):
