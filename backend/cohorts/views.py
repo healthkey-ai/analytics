@@ -200,6 +200,12 @@ def form_settings(request):
     races = sorted(
         qs.exclude(race__isnull=True).values_list("race", flat=True).distinct()
     )
+    stages = sorted(
+        qs.exclude(stage__isnull=True)
+          .exclude(stage="")
+          .values_list("stage", flat=True)
+          .distinct()
+    )
 
     # Compute patient counts per normalized disease name (scoped to org if provided)
     base_qs = PatientInfo.objects.exclude(disease__isnull=True)
@@ -214,7 +220,7 @@ def form_settings(request):
     # Sort diseases by patient count descending
     diseases = sorted(disease_counts.keys(), key=lambda d: -disease_counts[d])
 
-    return Response({
+    response_payload = {
         "diseases": diseases,
         "disease_counts": disease_counts,
         **disease_config,
@@ -225,4 +231,8 @@ def form_settings(request):
         "smoking_options": ["Never", "Former", "Current"],
         "therapy_line_options": [1, 2, 3, 4],
         "mrd_status_options": ["MRD Negative", "MRD Positive", "Not Assessed"],
-    })
+    }
+    if stages:
+        response_payload["stages"] = stages
+
+    return Response(response_payload)
