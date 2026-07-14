@@ -205,6 +205,10 @@ export default function CohortPanel({ filters, settings, onUpdate, onClear, coho
             <p className="text-xs text-slate-400 mb-1">Race</p>
             <MultiSelect options={settings?.race_options ?? []} selected={sel('race')} onChange={upd('race')} />
           </div>
+          <div>
+            <p className="text-xs text-slate-400 mb-1">Country</p>
+            <MultiSelect options={settings?.countries ?? []} selected={sel('country')} onChange={upd('country')} />
+          </div>
         </Section>
 
         <Section title="Performance Status" defaultOpen={false}>
