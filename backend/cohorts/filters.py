@@ -2,6 +2,7 @@ import datetime
 
 from django.db.models import Q
 from django.utils import timezone
+from cohorts.stage_utils import expand_stage_filter_values
 from patients.models import PatientInfo
 from metrics.services.clinical_filters import HIGH_RISK_CYTO, HAS_SCT, NO_SCT
 
@@ -47,6 +48,7 @@ def apply_cohort_filters(request) -> "QuerySet[PatientInfo]":
     # ── ISS / TNM stage ───────────────────────────────────────────────────────
     stages = _list("stage")
     if stages:
+        stages = expand_stage_filter_values(stages, disease)
         qs = qs.filter(stage__in=stages)
 
     # ── age ───────────────────────────────────────────────────────────────────

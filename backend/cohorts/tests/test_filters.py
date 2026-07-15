@@ -1,4 +1,4 @@
-"""Tests for apply_cohort_filters org and date params."""
+"""Tests for apply_cohort_filters org, date, and stage alias params."""
 import datetime
 from unittest.mock import patch, MagicMock
 
@@ -96,6 +96,18 @@ def test_country_filter_applied_as_multi_value():
 def test_country_filter_not_applied_when_absent():
     result = _run_filters({})
     assert "country__in" not in result._filters
+
+
+# ── stage filters ────────────────────────────────────────────────────────────
+
+def test_breast_cancer_stage_filter_expands_qualifier_aliases():
+    result = _run_filters({"disease": "Breast Cancer", "stage": ["II"]})
+    assert result._filters.get("stage__in") == ["Stage II", "Stage 2 (qualifier value)"]
+
+
+def test_non_breast_stage_filter_is_not_rewritten():
+    result = _run_filters({"disease": "Multiple Myeloma", "stage": ["ISS Stage II"]})
+    assert result._filters.get("stage__in") == ["ISS Stage II"]
 
 
 # ── date filter ───────────────────────────────────────────────────────────────

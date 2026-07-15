@@ -12,6 +12,10 @@ from rest_framework import status
 from .models import Identity, Organization
 
 
+class _EmailAlreadyExists(Exception):
+    """Raised when a local account with a usable password already exists for this email."""
+
+
 def _create_or_claim_signup_identity(email, password, name):
     local_identities = list(
         Identity.objects.select_for_update()
@@ -21,7 +25,7 @@ def _create_or_claim_signup_identity(email, password, name):
 
     for identity in local_identities:
         if identity.has_usable_password():
-            raise IntegrityError
+            raise _EmailAlreadyExists
 
     if local_identities:
         identity = local_identities[0]
@@ -75,7 +79,10 @@ def signup_view(request):
     try:
         with transaction.atomic():
             user = _create_or_claim_signup_identity(email, password, name)
+    except _EmailAlreadyExists:
+        return Response({"detail": "An account with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
     except IntegrityError:
+        # DB-level uniqueness violation (e.g. uid collision or a unique constraint on email)
         return Response({"detail": "An account with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
 
     request.session.cycle_key()
