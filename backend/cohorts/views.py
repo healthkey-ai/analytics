@@ -198,6 +198,9 @@ def form_settings(request):
     regions = sorted(
         qs.exclude(region__isnull=True).values_list("region", flat=True).distinct()
     )
+    countries = sorted(
+        qs.exclude(country__isnull=True).values_list("country", flat=True).distinct()
+    )
     races = sorted(
         qs.exclude(race__isnull=True).values_list("race", flat=True).distinct()
     )
@@ -227,6 +230,7 @@ def form_settings(request):
         "disease_counts": disease_counts,
         **disease_config,
         "outcome_options": OUTCOME_OPTIONS,
+        "countries": countries,
         "regions": regions,
         "race_options": races,
         "ecog_values": [0, 1, 2, 3],

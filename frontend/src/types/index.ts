@@ -23,6 +23,7 @@ export interface CohortFilters {
   age_max?: number
   gender?: string
   race?: string[]
+  country?: string[]
   region?: string[]
   ecog?: number[]
   cytogenetic_markers?: string[]
@@ -67,6 +68,7 @@ export interface FormSettings {
   outcome_options: string[]
   cytogenetic_markers: string[]
   refractory_statuses: string[]
+  countries: string[]
   regions: string[]
   race_options: string[]
   mrd_status_options: string[]
@@ -242,4 +244,3 @@ export interface SwitchingRow {
   n_switched: number
   switches: { to_regimen: string; n: number; pct: number }[]
 }
-

@@ -39,11 +39,11 @@ class _FakeQS:
 def _make_request(params: dict):
     """Build a minimal request-like object with QueryDict-backed query_params."""
     qd = QueryDict(mutable=True)
-    for key, value in params.items():
-        if isinstance(value, list):
-            qd.setlist(key, value)
+    for key, val in params.items():
+        if isinstance(val, list):
+            qd.setlist(key, [str(v) for v in val])
         else:
-            qd[key] = value
+            qd[key] = str(val)
     req = MagicMock()
     req.query_params = qd
     return req
@@ -75,6 +75,30 @@ def test_org_filter_not_applied_when_absent():
     result = _run_filters({})
     assert "organization__name__iexact" not in result._filters
 
+
+# ── demographic filters ──────────────────────────────────────────────────────
+
+def test_gender_filter_accepts_male_label():
+    result = _run_filters({"gender": "Male"})
+    assert result._filters.get("gender__in") == ["M", "m", "Male", "male", "MALE"]
+
+
+def test_gender_filter_accepts_female_code():
+    result = _run_filters({"gender": "F"})
+    assert result._filters.get("gender__in") == ["F", "f", "Female", "female", "FEMALE"]
+
+
+def test_country_filter_applied_as_multi_value():
+    result = _run_filters({"country": ["US", "GB"]})
+    assert result._filters.get("country__in") == ["US", "GB"]
+
+
+def test_country_filter_not_applied_when_absent():
+    result = _run_filters({})
+    assert "country__in" not in result._filters
+
+
+# ── stage filters ────────────────────────────────────────────────────────────
 
 def test_breast_cancer_stage_filter_expands_qualifier_aliases():
     result = _run_filters({"disease": "Breast Cancer", "stage": ["II"]})

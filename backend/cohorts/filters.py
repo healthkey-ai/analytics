@@ -62,7 +62,17 @@ def apply_cohort_filters(request) -> "QuerySet[PatientInfo]":
     # ── gender ────────────────────────────────────────────────────────────────
     gender = p.get("gender")
     if gender:
-        qs = qs.filter(gender=gender)
+        normalized_gender = gender.strip().lower()
+        gender_values = {
+            "m": ["M", "m", "Male", "male", "MALE"],
+            "male": ["M", "m", "Male", "male", "MALE"],
+            "f": ["F", "f", "Female", "female", "FEMALE"],
+            "female": ["F", "f", "Female", "female", "FEMALE"],
+        }.get(normalized_gender)
+        if gender_values:
+            qs = qs.filter(gender__in=gender_values)
+        else:
+            qs = qs.filter(gender__iexact=gender)
 
     # ── race ──────────────────────────────────────────────────────────────────
     races = _list("race")
@@ -70,6 +80,10 @@ def apply_cohort_filters(request) -> "QuerySet[PatientInfo]":
         qs = qs.filter(race__in=races)
 
     # ── geography ─────────────────────────────────────────────────────────────
+    countries = _list("country")
+    if countries:
+        qs = qs.filter(country__in=countries)
+
     regions = _list("region")
     if regions:
         qs = qs.filter(region__in=regions)
