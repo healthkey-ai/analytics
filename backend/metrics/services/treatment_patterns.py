@@ -24,6 +24,36 @@ def _short(name):
     return name[:idx] if idx > 0 else name[:30]
 
 
+def _overall_counts(qs, total):
+    """Patients per therapy across ANY line — a patient counts once per therapy
+    even if they received it in multiple lines."""
+    rows = qs.values('first_line_therapy', 'second_line_therapy', 'later_therapy')
+    patient_therapies = [
+        {r['first_line_therapy'], r['second_line_therapy'], r['later_therapy']} - {None, ""}
+        for r in rows
+    ]
+    counter = Counter()
+    for therapies in patient_therapies:
+        for therapy in therapies:
+            counter[therapy] += 1
+    return [
+        {"therapy": therapy, "count": cnt,
+         "pct": round(cnt / total * 100, 1) if total else 0}
+        for therapy, cnt in counter.most_common()
+    ]
+
+
+def _median(sorted_vals):
+    """Median of an already-sorted list; None when empty."""
+    n = len(sorted_vals)
+    if not n:
+        return None
+    mid = n // 2
+    if n % 2:
+        return sorted_vals[mid]
+    return round((sorted_vals[mid - 1] + sorted_vals[mid]) / 2, 1)
+
+
 def _build_sequences(qs):
     rows = qs.exclude(second_line_therapy__isnull=True).values(
         'first_line_therapy', 'second_line_therapy', 'later_therapy'
@@ -63,11 +93,25 @@ def compute(qs):
         for n in [1, 2, 3, 4] if agg[f'eq{n}']
     ]
 
+    # Treatment burden — how heavily pre-treated the cohort is
+    line_counts = sorted(
+        c for c in qs.exclude(therapy_lines_count__isnull=True)
+                     .values_list('therapy_lines_count', flat=True)
+    )
+    median_lines = _median(line_counts)
+    burden = {
+        "median_lines": median_lines,
+        "ge2_pct": round(agg['ge2'] / total * 100, 1) if total else 0,
+        "ge3_pct": round(agg['ge3'] / total * 100, 1) if total else 0,
+    }
+
     return {
         "first_line":        _therapy_counts(qs, 'first_line_therapy', total),
         "second_line":       _therapy_counts(qs, 'second_line_therapy', total),
         "later_line":        _therapy_counts(qs, 'later_therapy', total),
+        "overall":           _overall_counts(qs, total),
         "line_funnel":       line_funnel,
         "line_distribution": exact_dist,
+        "burden":            burden,
         "sequences":         _build_sequences(qs),
     }

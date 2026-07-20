@@ -20,6 +20,11 @@ import ForestPlot from '../charts/ForestPlot'
 import CohortCharacterization from '../charts/CohortCharacterization'
 import IncidenceChart from '../charts/IncidenceChart'
 import TimeToTreatment from '../charts/TimeToTreatment'
+import DiseaseStateSnapshot from '../charts/DiseaseStateSnapshot'
+import TherapyCategories from '../charts/TherapyCategories'
+import PathwayOutcomes from '../charts/PathwayOutcomes'
+import Pod24 from '../charts/Pod24'
+import LandmarkResponse from '../charts/LandmarkResponse'
 import api from '../../api/client'
 
 interface Props {
@@ -33,6 +38,7 @@ interface Props {
 
 type DashboardTab    = 'outcomes' | 'treatments' | 'profile'
 type ResponseLineTab = '1L' | '2L' | '3L+'
+type PatternLineTab  = '1L' | '2L' | '3L+' | 'overall'
 
 function Spinner() {
   return (
@@ -59,8 +65,10 @@ function NoDataPlaceholder() {
 export default function Dashboard({ metrics, loading, disease, user, onLogout, activeSavedCohortId }: Props) {
   const canExport = user.is_premium === true || user.is_staff === true
   const isMultipleMyeloma = disease === 'Multiple Myeloma'
+  const isFollicularLymphoma = disease === 'Follicular Lymphoma'
   const [tab, setTab]                 = useState<DashboardTab>('outcomes')
   const [responseTab, setResponseTab] = useState<ResponseLineTab>('1L')
+  const [patternTab, setPatternTab]   = useState<PatternLineTab>('1L')
   const [showExportMenu, setShowExportMenu] = useState(false)
   const exportMenuRef = useRef<HTMLDivElement>(null)
 
@@ -83,6 +91,12 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
     responseTab === '1L' ? metrics?.response_rates?.first_line ?? []
     : responseTab === '2L' ? metrics?.response_rates?.second_line ?? []
     : metrics?.response_rates?.later_line ?? []
+
+  const patternData =
+    patternTab === '1L' ? metrics?.treatment_patterns?.first_line ?? []
+    : patternTab === '2L' ? metrics?.treatment_patterns?.second_line ?? []
+    : patternTab === '3L+' ? metrics?.treatment_patterns?.later_line ?? []
+    : metrics?.treatment_patterns?.overall ?? []
 
   const TABS: { id: DashboardTab; label: string }[] = [
     { id: 'outcomes',   label: 'Outcomes' },
@@ -271,6 +285,33 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               />
             </MetricCard>
 
+            {isFollicularLymphoma && metrics?.pod24 && (
+              <MetricCard
+                title="POD24 Split"
+                description="Separates patients who progressed within 24 months of starting first-line therapy (POD24) — a group with markedly worse outcomes in follicular lymphoma — from those who did not, and compares overall survival from the 24-month landmark between the two groups. The clock starts at first-line treatment start, stated explicitly because landmark definitions vary. Patients censored before 24 months without an event are unevaluable."
+              >
+                <Pod24 data={metrics.pod24} />
+              </MetricCard>
+            )}
+
+            {isFollicularLymphoma && metrics?.landmark_response && (
+              <MetricCard
+                title="Complete Response by Landmark (CR30)"
+                description="Proportion of evaluable first-line patients who achieved a complete response within 12, 24, 30, or 36 months of starting first-line therapy. CR30 (complete response at 30 months) is a follicular-lymphoma-specific depth-of-response measure. The clock starts at first-line treatment start."
+              >
+                <LandmarkResponse data={metrics.landmark_response} />
+              </MetricCard>
+            )}
+
+            {metrics?.pathway_outcomes && metrics.pathway_outcomes.pathways.length > 0 && (
+              <MetricCard
+                title="Outcomes by Treatment Pathway"
+                description="Overall survival compared across the most common first-line → second-line pathway combinations in the cohort (e.g. BR → R-CHOP vs R-CHOP → R²). Only pathways with enough patients are shown — small pathways produce unreliable curves."
+              >
+                <PathwayOutcomes data={metrics.pathway_outcomes} />
+              </MetricCard>
+            )}
+
             <MetricCard
               title="Duration of Response (DOR)"
               description="Time from first documented response (≥PR) to disease progression or death among patients who responded to therapy. Presented as a Kaplan-Meier curve for responders only. DOR measures the durability of treatment benefit and complements overall response rate — a high ORR with short DOR indicates transient rather than sustained disease control."
@@ -310,24 +351,48 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               </div>
             </MetricCard>
 
-            {/* 1L Patterns + Lines of Therapy */}
+            {/* Treatment Patterns by Line + Lines of Therapy */}
             <div className="grid grid-cols-2 gap-6">
               <MetricCard
-                title="1st Line Treatment Patterns"
-                description="Distribution of first-line regimens used in the cohort, ranked by frequency. Each bar represents the percentage of patients who received that regimen as their initial therapy. Helps identify dominant treatment approaches and variation in prescribing practice across sites or time periods."
+                title="Treatment Patterns by Line"
+                description="Distribution of regimens used in the cohort, ranked by frequency, broken down by line of therapy. The Overall tab shows how many patients received each regimen in any line (a patient counts once per regimen). Helps identify dominant treatment approaches and variation in prescribing practice across lines."
               >
-                <TreatmentPatterns data={metrics?.treatment_patterns?.first_line ?? []} title="" />
+                <div className="flex gap-1 rounded-lg border border-gray-200 p-0.5 bg-gray-50 w-fit mb-4">
+                  {(['1L', '2L', '3L+', 'overall'] as PatternLineTab[]).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setPatternTab(t)}
+                      className={`px-4 py-1.5 text-xs rounded-md font-semibold transition-colors ${
+                        patternTab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      {t === '1L' ? '1st Line' : t === '2L' ? '2nd Line' : t === '3L+' ? '3rd Line+' : 'Overall'}
+                    </button>
+                  ))}
+                </div>
+                <TreatmentPatterns data={patternData} title="" />
               </MetricCard>
               <MetricCard
-                title="Lines of Therapy"
-                description="Left: a funnel showing how many patients advanced to each successive line of therapy (1L → 2L → 3L+), illustrating patient attrition as treatment progresses. Right: distribution of the total number of treatment lines each patient received, indicating the depth of therapy across the cohort."
+                title="Lines of Therapy & Treatment Burden"
+                description="How heavily pre-treated the cohort is: median lines of therapy received and the share of patients reaching two or more (and three or more) lines. Left: a funnel showing how many patients advanced to each successive line of therapy, illustrating attrition as treatment progresses. Right: distribution of the total number of treatment lines each patient received."
               >
                 <TreatmentLines
                   funnel={metrics?.treatment_patterns?.line_funnel ?? []}
                   distribution={metrics?.treatment_patterns?.line_distribution ?? []}
+                  burden={metrics?.treatment_patterns?.burden}
                 />
               </MetricCard>
             </div>
+
+            {/* Therapy Categories */}
+            <MetricCard
+              title="Therapy Categories by Line"
+              description="Regimens grouped into therapy categories — bispecific antibodies, CAR-T, chemotherapy-containing, immunomodulatory (IMiD), monoclonal antibodies, targeted/small-molecule, and endocrine therapies — shown per line of therapy. Combination regimens can belong to more than one category (e.g. R-CHOP is both chemotherapy-containing and a monoclonal-antibody regimen), so percentages need not sum to 100."
+            >
+              {metrics?.therapy_categories
+                ? <TherapyCategories data={metrics.therapy_categories} />
+                : <NoDataPlaceholder />}
+            </MetricCard>
 
             {/* Treatment Duration + Sequences */}
             <div className="grid grid-cols-2 gap-6">
@@ -373,6 +438,15 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
           </>
         ) : (
           <>
+            {metrics?.disease_state && metrics.disease_state.total > 0 && (
+              <MetricCard
+                title="Disease-State Snapshot"
+                description="At-a-glance breakdown of where patients are in their disease journey: newly diagnosed, on watch-and-wait, in remission, or relapsed/refractory. States are derived from treatment history and outcomes (no explicit field exists): relapsed/refractory = 2+ lines, a recorded relapse, any later-line therapy recorded, or progressive disease; in remission = responded to first-line with no later line; watch-and-wait = diagnosed over 6 months ago and never treated; newly diagnosed = diagnosed within the last 6 months and not yet treated."
+              >
+                <DiseaseStateSnapshot data={metrics.disease_state} />
+              </MetricCard>
+            )}
+
             {metrics?.cohort_characterization && metrics.cohort_characterization.n > 0 && (
               <MetricCard
                 title="Cohort Characterization (Table 1)"
