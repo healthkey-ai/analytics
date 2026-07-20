@@ -106,6 +106,17 @@ def test_short_follow_up_only_evaluable_at_early_landmarks():
     assert lm[30]["evaluable"] == 0
 
 
+def test_death_without_end_date_is_evaluable_at_all_landmarks():
+    """A patient who dies before the landmark without a recorded 1L end date had
+    their opportunity to respond — excluding them inflates the CR rate."""
+    start = D(2022, 1, 1)
+    row = _row(first_line_start_date=start, death_date=_months_after(start, 6))
+    result = compute(_FakeQS([row]))
+
+    assert all(e["evaluable"] == 1 for e in result["landmarks"])
+    assert all(e["cr_count"] == 0 for e in result["landmarks"])
+
+
 def test_missing_start_date_skipped():
     row = _row(first_line_end_date=D(2023, 1, 1), first_line_outcome="Complete Response")
     result = compute(_FakeQS([row]))

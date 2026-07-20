@@ -1,4 +1,5 @@
 import datetime
+import pytest
 from metrics.services.pod24 import compute, _classify, POD24_MONTHS
 
 D = datetime.date
@@ -133,19 +134,73 @@ def test_compute_structure_and_counts():
 
     assert result["clock_start"] == "first_line_start_date"
     assert result["window_months"] == POD24_MONTHS
+    assert result["landmark_months"] == POD24_MONTHS
 
     groups = {g["key"]: g for g in result["groups"]}
     assert groups["pod24"]["count"] == 2
     assert groups["no_pod24"]["count"] == 1
     assert groups["unevaluable"]["count"] == 1
-    # POD24 / no-POD24 pcts are of the classified (evaluable) patients
-    assert groups["pod24"]["pct"] == round(2 / 3 * 100, 1)
+    # All pcts share one denominator — the full classified population
+    assert groups["pod24"]["pct"] == 50.0
+    assert groups["no_pod24"]["pct"] == 25.0
+    assert groups["unevaluable"]["pct"] == 25.0
 
     assert [line["label"] for line in result["os"]] == ["POD24", "No POD24"]
-    assert result["os"][0]["n"] == 2
-    assert result["os"][1]["n"] == 1
     for line in result["os"]:
         assert {"curve", "n", "median"} <= set(line)
+
+
+def test_classified_patient_without_os_dates_still_counted():
+    """A patient classified POD24 via a PD outcome but lacking death/last_treatment
+    must appear in the group count even though they can't enter the KM curve."""
+    start = D(2022, 1, 1)
+    rows = [
+        _row(first_line_start_date=start,
+             first_line_end_date=_months_after(start, 12),
+             first_line_outcome="Progressive Disease"),
+    ]
+    result = compute(_FakeQS(rows))
+
+    groups = {g["key"]: g for g in result["groups"]}
+    assert groups["pod24"]["count"] == 1
+    # ...but the landmark KM analysis (24mo+) has no one to include
+    assert result["os"][0]["n"] == 0
+    assert result["os"][0]["curve"] == []
+
+
+def test_os_comparison_is_landmarked_at_24_months():
+    """OS times must be shifted to the 24-month landmark so the no-POD24 arm is
+    not structurally free of early deaths (naive log-rank would measure the
+    classification rule, not survival)."""
+    start = D(2022, 1, 1)
+    rows = [
+        _row(first_line_start_date=start,
+             second_line_start_date=_months_after(start, 12),
+             death_date=_months_after(start, 36)),
+        _row(first_line_start_date=start,
+             first_line_outcome="Complete Response",
+             last_treatment=_months_after(start, 60)),
+    ]
+    result = compute(_FakeQS(rows))
+
+    pod24_curve = result["os"][0]["curve"]
+    # Died at 36 months → event at 12 months post-landmark
+    event_times = [p["time"] for p in pod24_curve if p["time"] > 0]
+    assert event_times == [pytest.approx(12.0, abs=0.2)]
+
+
+def test_patients_not_surviving_to_landmark_excluded_from_os():
+    start = D(2022, 1, 1)
+    rows = [
+        # POD24 patient who dies at 10 months — before the landmark
+        _row(first_line_start_date=start,
+             death_date=_months_after(start, 10)),
+    ]
+    result = compute(_FakeQS(rows))
+
+    groups = {g["key"]: g for g in result["groups"]}
+    assert groups["pod24"]["count"] == 1
+    assert result["os"][0]["n"] == 0  # not in the 24-month landmark analysis
 
 
 def test_compute_empty_queryset():

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import type { ReactNode } from 'react'
 import {
   LineChart,
   Line,
@@ -14,21 +15,29 @@ import type { SubgroupSurvivalLine } from '../../types'
 interface Props {
   lines: SubgroupSurvivalLine[]
   xLabel?: string
+  /** Optional content appended to the legend row (e.g. a p-value badge). */
+  legendExtra?: ReactNode
 }
 
 const COLORS = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed']
 
 /**
- * Shared Kaplan-Meier step chart for a set of labelled survival lines
- * (used by POD24 split and Outcomes by Treatment Pathway).
+ * Shared Kaplan-Meier step chart for a set of labelled survival lines.
+ * Lines with no curve points are dropped — otherwise mergeKMCurves would
+ * forward-fill them to a phantom flat line at 100% survival.
  */
-export default function KMGroupChart({ lines, xLabel = 'Months from 1st-line start' }: Props) {
-  const chartData = useMemo(
-    () => mergeKMCurves((lines ?? []).map((l, i) => ({ key: `g${i}`, curve: l.curve }))),
+export default function KMGroupChart({ lines, xLabel = 'Months from 1st-line start', legendExtra }: Props) {
+  const validLines = useMemo(
+    () => (lines ?? []).filter((l) => l.curve && l.curve.length > 0),
     [lines]
   )
 
-  if (!lines || lines.length === 0) {
+  const chartData = useMemo(
+    () => mergeKMCurves(validLines.map((l, i) => ({ key: `g${i}`, curve: l.curve }))),
+    [validLines]
+  )
+
+  if (validLines.length === 0) {
     return (
       <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
         No data available
@@ -39,19 +48,22 @@ export default function KMGroupChart({ lines, xLabel = 'Months from 1st-line sta
   return (
     <div>
       {/* Legend */}
-      <div className="flex flex-wrap gap-6 mb-4">
-        {lines.map((line, i) => (
-          <div key={line.label} className="flex items-center gap-2">
-            <span className="inline-block w-8 h-0.5" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-            <span className="text-xs text-gray-600">
-              <span className="font-semibold">{line.label}</span>
-              {' · n='}{line.n}
-              {line.median != null
-                ? ` · median ${line.median.toFixed(1)} mo`
-                : ' · median NR'}
-            </span>
-          </div>
-        ))}
+      <div className="flex flex-wrap items-center gap-4 mb-4">
+        <div className="flex flex-wrap gap-6">
+          {validLines.map((line, i) => (
+            <div key={line.label} className="flex items-center gap-2">
+              <span className="inline-block w-8 h-0.5" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+              <span className="text-xs text-gray-600">
+                <span className="font-semibold">{line.label}</span>
+                {' · n='}{line.n}
+                {line.median != null
+                  ? ` · median ${line.median.toFixed(1)} mo`
+                  : ' · median NR'}
+              </span>
+            </div>
+          ))}
+        </div>
+        {legendExtra}
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
@@ -74,14 +86,14 @@ export default function KMGroupChart({ lines, xLabel = 'Months from 1st-line sta
               const nameStr = String(name)
               if (nameStr.endsWith('_lower') || nameStr.endsWith('_upper')) return null
               const idx = Number(nameStr.replace('g', ''))
-              const label = lines[idx]?.label ?? nameStr
+              const label = validLines[idx]?.label ?? nameStr
               return [`${(Number(v) * 100).toFixed(1)}%`, label]
             }}
             labelFormatter={(t: unknown) => `${Number(t)} months`}
             contentStyle={{ fontSize: 12 }}
           />
           <ReferenceLine y={0.5} stroke="#9ca3af" strokeDasharray="4 4" />
-          {lines.map((line, i) => (
+          {validLines.map((line, i) => (
             <Line
               key={line.label}
               type="stepAfter"
@@ -93,7 +105,7 @@ export default function KMGroupChart({ lines, xLabel = 'Months from 1st-line sta
             />
           ))}
           {/* CI bands — dashed, low opacity, excluded from legend/tooltip */}
-          {lines.map((line, i) => [
+          {validLines.map((line, i) => [
             <Line
               key={`${line.label}_lower`}
               type="stepAfter"

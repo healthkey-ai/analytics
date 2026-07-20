@@ -40,7 +40,7 @@ export default function Pod24({ data }: Props) {
           >
             <div className="text-xs font-medium text-gray-500 mb-1">{g.label}</div>
             <div className="text-2xl font-bold text-gray-900">{g.count.toLocaleString()}</div>
-            <div className="text-xs text-gray-400">{g.pct.toFixed(1)}% of evaluable</div>
+            <div className="text-xs text-gray-400">{g.pct.toFixed(1)}% of cohort</div>
           </div>
         ))}
         {unevaluable && (
@@ -54,13 +54,17 @@ export default function Pod24({ data }: Props) {
         </div>
       </div>
 
-      <KMGroupChart lines={data.os} />
+      <KMGroupChart lines={data.os} xLabel="Months from 24-month landmark" />
 
       <p className="text-xs text-gray-400 mt-2">
         POD24 = progression (or death, or start of next-line therapy as a progression surrogate)
         within {data.window_months} months of first-line treatment start. Clock starts at
         first-line treatment start. Patients censored before {data.window_months} months with no
-        event are unevaluable.
+        event are unevaluable. Overall survival is compared from the {data.landmark_months}-month
+        landmark — only patients alive and in follow-up at {data.landmark_months} months are
+        included, because the no-POD24 group cannot by definition have deaths before that point
+        and a comparison from time zero would measure the classification rule rather than
+        survival. Legend n = patients in the landmark analysis.
       </p>
     </div>
   )

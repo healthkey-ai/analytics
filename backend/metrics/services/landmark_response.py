@@ -7,8 +7,13 @@ first-line therapy.
 
   - CR by M        — 1L outcome is a complete response AND the 1L end date is
                      within M months of the 1L start date.
-  - Evaluable at M — 1L start date known AND (1L end date known OR follow-up
-                     (last_treatment / death) reaches at least M months).
+  - Evaluable at M — 1L start date known AND (1L end date known OR the patient
+                     has died — their outcome is final OR follow-up
+                     (last_treatment) reaches at least M months).
+
+Counting deaths as evaluable matters: without it, patients who die before the
+landmark without a recorded 1L end date drop out of the denominator, and CR
+rates inflate with end-date capture completeness.
 
 Clock start is explicitly the first-line treatment start date, surfaced in the
 payload as `clock_start` per the proposal's limitation note.
@@ -42,8 +47,10 @@ def compute(qs, landmarks=None):
         for entry in results:
             months = entry["months"]
             days = months * _DAYS_PER_MONTH
-            evaluable = (end is not None) or (
-                follow_up is not None and (follow_up - start).days >= days
+            evaluable = (
+                (end is not None)
+                or (row["death_date"] is not None)
+                or (follow_up is not None and (follow_up - start).days >= days)
             )
             if not evaluable:
                 continue

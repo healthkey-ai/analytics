@@ -27,11 +27,14 @@ describe('TherapyCategories', () => {
     expect(screen.getByText(/more than one category/)).toBeInTheDocument()
   })
 
-  it('shows empty state when the selected line has no data', async () => {
+  it('keeps tabs visible when the selected line has no data', async () => {
     const user = userEvent.setup()
     render(<TherapyCategories data={data} />)
     await user.click(screen.getByText('3rd Line+'))
-    expect(screen.getByText('No data available')).toBeInTheDocument()
+    expect(screen.getByText('No data available for this line')).toBeInTheDocument()
+    // Tabs must stay mounted so the user can switch back
+    expect(screen.getByText('1st Line')).toBeInTheDocument()
+    expect(screen.getByText('2nd Line')).toBeInTheDocument()
   })
 
   it('shows empty state when data is null', () => {

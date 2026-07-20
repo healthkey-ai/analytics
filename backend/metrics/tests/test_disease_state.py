@@ -18,7 +18,9 @@ def _row(**overrides):
         "diagnosis_date": None,
         "first_line_start_date": None,
         "first_line_outcome": None,
+        "second_line_therapy": None,
         "second_line_outcome": None,
+        "later_therapy": None,
         "later_outcome": None,
         "therapy_lines_count": None,
         "relapse_count": None,
@@ -80,6 +82,18 @@ def test_relapsed_via_progressive_disease_outcome():
         first_line_start_date=D(2023, 2, 1),
         first_line_outcome="Progressive Disease",
         therapy_lines_count=1,
+    )
+    assert _classify(row, TODAY) == "relapsed_refractory"
+
+
+def test_relapsed_via_second_line_data_with_null_lines_count():
+    """2L therapy recorded but therapy_lines_count missing must not land in In Remission."""
+    row = _row(
+        first_line_start_date=D(2023, 2, 1),
+        first_line_outcome="Complete Response",
+        second_line_therapy="Lenalidomide and Rituximab (R2)",
+        second_line_outcome="Complete Response",
+        therapy_lines_count=None,
     )
     assert _classify(row, TODAY) == "relapsed_refractory"
 

@@ -39,6 +39,10 @@ def _classify(row, today):
     if (
         lines >= 2
         or relapses > 0
+        # Presence of 2L/later-line data implies the patient relapsed even when
+        # therapy_lines_count is missing.
+        or row["second_line_therapy"]
+        or row["later_therapy"]
         or "Progressive Disease" in (first_outcome, *later_outcomes)
     ):
         return "relapsed_refractory"
@@ -63,7 +67,9 @@ def compute(qs, today=None):
         "diagnosis_date",
         "first_line_start_date",
         "first_line_outcome",
+        "second_line_therapy",
         "second_line_outcome",
+        "later_therapy",
         "later_outcome",
         "therapy_lines_count",
         "relapse_count",

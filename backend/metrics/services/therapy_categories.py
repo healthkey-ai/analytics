@@ -14,6 +14,10 @@ CATEGORY_RULES = [
     ("Bispecific antibody", ["mosunetuzumab", "epcoritamab", "glofitamab", "teclistamab"]),
     ("CAR-T", ["axicabtagene", "tisagenlecleucel", "ide-cel", "cilta-cel"]),
     (
+        "Antibody-drug conjugate",
+        ["sacituzumab", "belantamab", "t-dm1", "deruxtecan"],
+    ),
+    (
         "Chemotherapy-containing",
         [
             "chop", "cvp", "bendamustine", "cyclophosphamide", "melphalan",
@@ -26,7 +30,7 @@ CATEGORY_RULES = [
         "Monoclonal antibody",
         [
             "rituximab", "obinutuzumab", "daratumumab", "isatuximab",
-            "trastuzumab", "pertuzumab", "elotuzumab",
+            "trastuzumab", "pertuzumab", "elotuzumab", "pembrolizumab",
             # Abbreviated combos whose anti-CD20 component is implied:
             # R-CHOP, R-CVP (rituximab), G-CHOP (obinutuzumab)
             "r-chop", "r-cvp", "g-chop",
@@ -36,7 +40,7 @@ CATEGORY_RULES = [
         "Targeted / small-molecule",
         [
             "tazemetostat", "copanlisib", "venetoclax", "selinexor", "parp",
-            "bortezomib", "carfilzomib", "ixazomib", "cdk4/6",
+            "bortezomib", "carfilzomib", "ixazomib", "cdk4/6", "tucatinib",
         ],
     ),
     ("Endocrine", ["tamoxifen", "letrozole", "aromatase", "fulvestrant"]),

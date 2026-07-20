@@ -87,47 +87,59 @@ def _os_times_events(row):
 def compute(qs):
     rows = qs.values(*_FIELDS)
 
-    groups = {"pod24": [], "no_pod24": [], "unevaluable": 0}
+    counts = {"pod24": 0, "no_pod24": 0, "unevaluable": 0}
+    km_te = {"pod24": [], "no_pod24": []}
     for row in rows:
         key = _classify(row)
-        if key == "unevaluable":
-            groups["unevaluable"] += 1
-        else:
+        counts[key] += 1
+        if key != "unevaluable":
             te = _os_times_events(row)
             if te:
-                groups[key].append(te)
+                km_te[key].append(te)
 
-    pod24_te = groups["pod24"]
-    no_pod24_te = groups["no_pod24"]
-    evaluable = len(pod24_te) + len(no_pod24_te) + groups["unevaluable"]
-    classified = len(pod24_te) + len(no_pod24_te)
+    total = sum(counts.values())
+
+    # OS comparison is a 24-month landmark analysis: death is a POD24-defining
+    # event, so the no-POD24 arm structurally cannot have deaths before month
+    # 24 and a naive log-rank test from time 0 would measure the classification
+    # rule rather than survival. Instead, compare only patients alive and in
+    # follow-up at 24 months, with times shifted to the landmark.
+    shifted = {
+        key: [
+            (round(t - POD24_MONTHS, 1), event)
+            for t, event in te
+            if t > POD24_MONTHS
+        ]
+        for key, te in km_te.items()
+    }
 
     return {
         "clock_start": "first_line_start_date",
         "window_months": POD24_MONTHS,
+        "landmark_months": POD24_MONTHS,
         "groups": [
             {
                 "key": "pod24",
                 "label": "POD24",
-                "count": len(pod24_te),
-                "pct": round(len(pod24_te) / classified * 100, 1) if classified else 0,
+                "count": counts["pod24"],
+                "pct": round(counts["pod24"] / total * 100, 1) if total else 0,
             },
             {
                 "key": "no_pod24",
                 "label": "No POD24",
-                "count": len(no_pod24_te),
-                "pct": round(len(no_pod24_te) / classified * 100, 1) if classified else 0,
+                "count": counts["no_pod24"],
+                "pct": round(counts["no_pod24"] / total * 100, 1) if total else 0,
             },
             {
                 "key": "unevaluable",
                 "label": "Unevaluable (< 24 months follow-up)",
-                "count": groups["unevaluable"],
-                "pct": round(groups["unevaluable"] / evaluable * 100, 1) if evaluable else 0,
+                "count": counts["unevaluable"],
+                "pct": round(counts["unevaluable"] / total * 100, 1) if total else 0,
             },
         ],
         "os": [
-            {"label": "POD24", **km_result(pod24_te)},
-            {"label": "No POD24", **km_result(no_pod24_te)},
+            {"label": "POD24", **km_result(shifted["pod24"])},
+            {"label": "No POD24", **km_result(shifted["no_pod24"])},
         ],
-        "os_p": log_rank_p([pod24_te, no_pod24_te]),
+        "os_p": log_rank_p([shifted["pod24"], shifted["no_pod24"]]),
     }

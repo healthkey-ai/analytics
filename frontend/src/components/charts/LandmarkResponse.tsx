@@ -16,15 +16,22 @@ interface Props {
 }
 
 export default function LandmarkResponse({ data }: Props) {
-  const landmarks = data?.landmarks ?? []
+  // Skip landmarks with no evaluable patients — a 0-height "0.0%" bar would
+  // read as "0% response" rather than "no data".
+  const landmarks = (data?.landmarks ?? []).filter((l) => l.evaluable > 0)
 
-  if (landmarks.length === 0 || landmarks.every((l) => l.evaluable === 0)) {
+  if (!data || landmarks.length === 0) {
     return (
       <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
         No data available
       </div>
     )
   }
+
+  const clockLabel =
+    data.clock_start === 'first_line_start_date'
+      ? 'first-line treatment start'
+      : data.clock_start
 
   const chartData = landmarks.map((l) => ({
     name: `CR${l.months}`,
@@ -63,8 +70,8 @@ export default function LandmarkResponse({ data }: Props) {
 
       <p className="text-xs text-gray-400 mt-2">
         Proportion of evaluable first-line patients in complete response within each landmark
-        (months). Clock starts at first-line treatment start. Evaluable = first-line end date
-        known, or follow-up reaching the landmark.
+        (months). Clock starts at {clockLabel}. Evaluable = first-line end date
+        known, the patient has died (outcome final), or follow-up reaches the landmark.
       </p>
     </div>
   )

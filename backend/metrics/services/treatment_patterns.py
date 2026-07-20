@@ -108,7 +108,7 @@ def compute(qs):
     return {
         "first_line":        _therapy_counts(qs, 'first_line_therapy', total),
         "second_line":       _therapy_counts(qs, 'second_line_therapy', total),
-        "later_line":        _therapy_counts(qs, 'later_line_therapy', total),
+        "later_line":        _therapy_counts(qs, 'later_therapy', total),
         "overall":           _overall_counts(qs, total),
         "line_funnel":       line_funnel,
         "line_distribution": exact_dist,

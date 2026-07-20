@@ -222,6 +222,7 @@ export interface MetricsResponse {
   pod24?: {
     clock_start: string
     window_months: number
+    landmark_months: number
     groups: { key: string; label: string; count: number; pct: number }[]
     os: SubgroupSurvivalLine[]
     os_p: number | null

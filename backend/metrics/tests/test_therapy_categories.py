@@ -105,3 +105,20 @@ def test_compute_uses_correct_field_per_line():
 def test_compute_empty_queryset():
     result = compute(_FakeQS([]))
     assert result == {"first_line": [], "second_line": [], "later_line": []}
+
+
+# ---------------------------------------------------------------------------
+# Coverage: every regimen offered in the filter panel must map to a category
+# ---------------------------------------------------------------------------
+
+def test_every_therapy_map_regimen_has_a_category():
+    from cohorts.views import THERAPY_MAP
+
+    uncategorized = [
+        (disease, regimen)
+        for disease, cfg in THERAPY_MAP.items()
+        for key in ("first_line_therapies", "second_line_therapies", "later_line_therapies")
+        for regimen in cfg.get(key, [])
+        if not categories_for(regimen)
+    ]
+    assert uncategorized == []

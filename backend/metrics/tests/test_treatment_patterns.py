@@ -1,6 +1,5 @@
 from metrics.services.treatment_patterns import _median, _overall_counts
 
-
 class _FakeQS:
     def __init__(self, rows):
         self._rows = rows
@@ -47,6 +46,25 @@ def test_overall_sorted_by_count_desc():
 
 def test_overall_empty_queryset():
     assert _overall_counts(_FakeQS([]), total=0) == []
+
+
+# ---------------------------------------------------------------------------
+# Regression: compute() must reference real PatientInfo fields
+# (a typo like 'later_line_therapy' raises FieldError on every /metrics request
+# but is invisible to _FakeQS-based tests)
+# ---------------------------------------------------------------------------
+
+def test_therapy_field_names_exist_on_model():
+    import inspect
+    import re
+    from patients.models import PatientInfo
+    from metrics.services import treatment_patterns
+
+    model_fields = {f.name for f in PatientInfo._meta.get_fields()}
+    src = inspect.getsource(treatment_patterns)
+    used = set(re.findall(r"_therapy_counts\(qs, '(\w+)'", src))
+    assert used, "no _therapy_counts field names found — test is vacuous"
+    assert used <= model_fields, f"unknown model fields: {used - model_fields}"
 
 
 # ---------------------------------------------------------------------------

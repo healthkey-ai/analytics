@@ -288,7 +288,7 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
             {isFollicularLymphoma && metrics?.pod24 && (
               <MetricCard
                 title="POD24 Split"
-                description="Separates patients who progressed within 24 months of starting first-line therapy (POD24) — a group with markedly worse outcomes in follicular lymphoma — from those who did not, and compares overall survival between the two groups. The clock starts at first-line treatment start, stated explicitly because landmark definitions vary. Patients censored before 24 months without an event are unevaluable."
+                description="Separates patients who progressed within 24 months of starting first-line therapy (POD24) — a group with markedly worse outcomes in follicular lymphoma — from those who did not, and compares overall survival from the 24-month landmark between the two groups. The clock starts at first-line treatment start, stated explicitly because landmark definitions vary. Patients censored before 24 months without an event are unevaluable."
               >
                 <Pod24 data={metrics.pod24} />
               </MetricCard>
@@ -441,7 +441,7 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
             {metrics?.disease_state && metrics.disease_state.total > 0 && (
               <MetricCard
                 title="Disease-State Snapshot"
-                description="At-a-glance breakdown of where patients are in their disease journey: newly diagnosed, on watch-and-wait, in remission, or relapsed/refractory. States are derived from treatment history and outcomes (no explicit field exists): relapsed/refractory = 2+ lines, a recorded relapse, or progressive disease; in remission = responded to first-line with no later line; watch-and-wait = diagnosed over 6 months ago and never treated; newly diagnosed = diagnosed within the last 6 months and not yet treated."
+                description="At-a-glance breakdown of where patients are in their disease journey: newly diagnosed, on watch-and-wait, in remission, or relapsed/refractory. States are derived from treatment history and outcomes (no explicit field exists): relapsed/refractory = 2+ lines, a recorded relapse, any later-line therapy recorded, or progressive disease; in remission = responded to first-line with no later line; watch-and-wait = diagnosed over 6 months ago and never treated; newly diagnosed = diagnosed within the last 6 months and not yet treated."
               >
                 <DiseaseStateSnapshot data={metrics.disease_state} />
               </MetricCard>
