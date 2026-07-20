@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   BarChart,
   Bar,
@@ -18,15 +19,20 @@ interface Props {
 }
 
 const OUTCOME_COLORS: Record<string, string> = {
-  CR: '#059669',
-  PR: '#0d9488',
-  SD: '#d97706',
-  PD: '#dc2626',
+  'Complete Response': '#059669',
+  'Partial Response': '#0d9488',
+  'Stable Disease': '#d97706',
+  'Progressive Disease': '#dc2626',
   Deceased: '#374151',
   Unknown: '#9ca3af',
 }
 
 export default function TransformationChart({ data }: Props) {
+  const osLine = useMemo(
+    () => ({ label: 'Post-transformation OS', ...data?.os_post_transformation }),
+    [data?.os_post_transformation]
+  )
+
   if (!data || data.evaluable === 0) {
     return (
       <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
@@ -43,8 +49,6 @@ export default function TransformationChart({ data }: Props) {
     label: `${o.count} (${o.pct.toFixed(1)}%)`,
     fill: OUTCOME_COLORS[o.outcome] ?? '#9ca3af',
   }))
-
-  const osLine = { label: 'Post-transformation OS', ...data.os_post_transformation }
 
   return (
     <div>
@@ -105,7 +109,7 @@ export default function TransformationChart({ data }: Props) {
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={outcomeData} layout="vertical" margin={{ top: 4, right: 80, left: 8, bottom: 4 }}>
                 <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={120} />
                 <Tooltip
                   contentStyle={{ fontSize: 12 }}
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any

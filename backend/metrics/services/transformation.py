@@ -12,7 +12,8 @@ only where a transformation is documented (`transformed_to_dlbcl` is not null
 = evaluable). The UI must state that caveat (per the FLF proposal).
 
 Data fields (PROMOP #226): transformed_to_dlbcl, dlbcl_transformation_date,
-post_transformation_outcome (vocab: CR / PR / SD / PD / Deceased / Unknown).
+post_transformation_outcome (vocabulary titles: Complete Response /
+Partial Response / Stable Disease / Progressive Disease / Deceased / Unknown).
 """
 from metrics.services.km_utils import km_result
 
@@ -21,7 +22,14 @@ _DAYS_PER_MONTH = 30.44
 # Histogram buckets in months from diagnosis to transformation
 _BINS = [(0, 12), (12, 24), (24, 36), (36, 60), (60, None)]
 
-OUTCOME_ORDER = ["CR", "PR", "SD", "PD", "Deceased", "Unknown"]
+OUTCOME_ORDER = [
+    "Complete Response",
+    "Partial Response",
+    "Stable Disease",
+    "Progressive Disease",
+    "Deceased",
+    "Unknown",
+]
 
 
 def _histogram(months_list):
@@ -107,7 +115,11 @@ def compute(qs):
         start = r["dlbcl_transformation_date"]
         if not start:
             continue
-        if r["death_date"] and r["death_date"] >= start:
+        if r["death_date"] and r["death_date"] < start:
+            # Contradictory record (derived transformation date postdates
+            # death) — exclude rather than censor a dead patient as alive.
+            continue
+        if r["death_date"]:
             end, event = r["death_date"], True
         elif r["last_treatment"] and r["last_treatment"] >= start:
             end, event = r["last_treatment"], False

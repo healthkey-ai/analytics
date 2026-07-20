@@ -19,8 +19,8 @@ const data = {
     ],
   },
   outcome_distribution: [
-    { outcome: 'CR', count: 4, pct: 33.3 },
-    { outcome: 'PD', count: 5, pct: 41.7 },
+    { outcome: 'Complete Response', count: 4, pct: 33.3 },
+    { outcome: 'Progressive Disease', count: 5, pct: 41.7 },
     { outcome: 'Deceased', count: 3, pct: 25.0 },
   ],
   os_post_transformation: {

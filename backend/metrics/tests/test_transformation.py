@@ -29,7 +29,7 @@ def _months_after(start, months):
     return start + datetime.timedelta(days=int(months * 30.44))
 
 
-def _transformed(months_to_transform=24, outcome="CR", death_after=None, last_after=None):
+def _transformed(months_to_transform=24, outcome="Complete Response", death_after=None, last_after=None):
     dx = D(2020, 1, 1)
     tx = _months_after(dx, months_to_transform)
     return _row(
@@ -121,22 +121,35 @@ def test_transformation_without_dates_excluded_from_timing():
 # How they did afterward — outcomes + OS
 # ---------------------------------------------------------------------------
 
-def test_outcome_distribution():
+def test_outcome_distribution_uses_promop_vocabulary_titles():
+    """PROMOP stores long-form titles (migration 0115 vocabulary) — the
+    distribution must bucket on those, not abbreviations."""
     rows = [
-        _transformed(outcome="CR"),
-        _transformed(outcome="CR"),
-        _transformed(outcome="PD"),
+        _transformed(outcome="Complete Response"),
+        _transformed(outcome="Complete Response"),
+        _transformed(outcome="Partial Response"),
+        _transformed(outcome="Progressive Disease"),
         _transformed(outcome="Deceased"),
         _transformed(outcome=None),  # → Unknown
     ]
     result = compute(_FakeQS(rows))
     dist = {o["outcome"]: o for o in result["outcome_distribution"]}
 
-    assert dist["CR"]["count"] == 2
-    assert dist["CR"]["pct"] == 40.0
-    assert dist["PD"]["count"] == 1
+    assert dist["Complete Response"]["count"] == 2
+    assert dist["Complete Response"]["pct"] == round(2 / 6 * 100, 1)
+    assert dist["Partial Response"]["count"] == 1
+    assert dist["Progressive Disease"]["count"] == 1
     assert dist["Deceased"]["count"] == 1
     assert dist["Unknown"]["count"] == 1
+
+
+def test_unexpected_outcome_string_falls_back_to_unknown():
+    rows = [_transformed(outcome="Some Free Text")]
+    result = compute(_FakeQS(rows))
+
+    assert result["outcome_distribution"] == [
+        {"outcome": "Unknown", "count": 1, "pct": 100.0}
+    ]
 
 
 def test_os_measured_from_transformation_date():
@@ -165,3 +178,44 @@ def test_os_skips_transformed_without_dates():
     rows = [_row(transformed_to_dlbcl=True)]
     result = compute(_FakeQS(rows))
     assert result["os_post_transformation"]["n"] == 0
+
+
+def test_death_before_transformation_date_excluded():
+    """Contradictory record (derived transformation date postdates death) must
+    be excluded, not censored as alive in the KM curve."""
+    tx = D(2022, 1, 1)
+    row = _row(
+        transformed_to_dlbcl=True,
+        dlbcl_transformation_date=tx,
+        diagnosis_date=D(2020, 1, 1),
+        death_date=D(2021, 6, 1),          # before transformation
+        last_treatment=D(2023, 1, 1),      # would otherwise censor
+    )
+    result = compute(_FakeQS([row]))
+    assert result["os_post_transformation"]["n"] == 0
+
+
+def test_transformation_before_diagnosis_excluded_from_timing():
+    row = _row(
+        transformed_to_dlbcl=True,
+        dlbcl_transformation_date=D(2019, 1, 1),
+        diagnosis_date=D(2020, 1, 1),  # transformation predates diagnosis
+    )
+    result = compute(_FakeQS([row]))
+    assert result["time_to_transformation"]["n"] == 0
+
+
+def test_histogram_boundary_at_twelve_months():
+    """Bins are [lo, hi): 365 days (~11.99 months) lands in '0–12',
+    366 days (~12.02 months) lands in '12–24'."""
+    dx = D(2020, 1, 1)
+    rows = [
+        _row(transformed_to_dlbcl=True, diagnosis_date=dx,
+             dlbcl_transformation_date=dx + datetime.timedelta(days=365)),
+        _row(transformed_to_dlbcl=True, diagnosis_date=dx,
+             dlbcl_transformation_date=dx + datetime.timedelta(days=366)),
+    ]
+    result = compute(_FakeQS(rows))
+    hist = {b["label"]: b["count"] for b in result["time_to_transformation"]["histogram"]}
+    assert hist["0–12"] == 1
+    assert hist["12–24"] == 1
