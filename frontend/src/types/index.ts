@@ -235,6 +235,19 @@ export interface MetricsResponse {
     min_n: number
     pathways: { label: string; n: number; os: SurvivalLine }[]
   }
+  transformation?: {
+    evaluable: number
+    unknown: number
+    transformed_count: number
+    transformed_pct: number
+    time_to_transformation: {
+      n: number
+      median_months: number | null
+      histogram: { label: string; count: number; lo: number; hi: number | null }[]
+    }
+    outcome_distribution: { outcome: string; count: number; pct: number }[]
+    os_post_transformation: SurvivalLine
+  }
 }
 
 export interface ForestPlotRow {

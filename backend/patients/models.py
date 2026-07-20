@@ -99,6 +99,11 @@ class PatientInfo(models.Model):
     death_date = models.DateField(null=True)
     mrd_status = models.TextField(null=True)
 
+    # histologic transformation of FL to DLBCL (PROMOP #226)
+    transformed_to_dlbcl = models.BooleanField(null=True)
+    dlbcl_transformation_date = models.DateField(null=True)
+    post_transformation_outcome = models.TextField(null=True)
+
     # treatment
     prior_therapy = models.TextField(null=True)
     therapy_lines_count = models.IntegerField(null=True)
