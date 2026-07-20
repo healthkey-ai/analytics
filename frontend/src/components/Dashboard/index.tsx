@@ -25,6 +25,7 @@ import TherapyCategories from '../charts/TherapyCategories'
 import PathwayOutcomes from '../charts/PathwayOutcomes'
 import Pod24 from '../charts/Pod24'
 import LandmarkResponse from '../charts/LandmarkResponse'
+import TransformationChart from '../charts/TransformationChart'
 import api from '../../api/client'
 
 interface Props {
@@ -309,6 +310,15 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
                 description="Overall survival compared across the most common first-line → second-line pathway combinations in the cohort (e.g. BR → R-CHOP vs R-CHOP → R²). Only pathways with enough patients are shown — small pathways produce unreliable curves."
               >
                 <PathwayOutcomes data={metrics.pathway_outcomes} />
+              </MetricCard>
+            )}
+
+            {isFollicularLymphoma && metrics?.transformation && (
+              <MetricCard
+                title="Transformation to Aggressive Lymphoma (DLBCL)"
+                description="Histologic transformation of follicular lymphoma to DLBCL — a clinically pivotal event. Shows how many patients transformed, when (months from diagnosis), and how they did afterward: outcome distribution and overall survival measured from the transformation date. Shown only where a transformation is documented; not every patient is biopsied at progression, so the true rate may be higher."
+              >
+                <TransformationChart data={metrics.transformation} />
               </MetricCard>
             )}
 

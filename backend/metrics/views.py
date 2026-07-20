@@ -26,16 +26,23 @@ from metrics.services import (
     pod24,
     landmark_response,
     pathway_outcomes,
+    transformation,
 )
 from metrics.services.survival import landmark_os_km
 
 
 MM_ONLY_DISEASES = {"multiple myeloma"}
+FL_ONLY_DISEASES = {"follicular lymphoma"}
 
 
 def _is_mm_request(request) -> bool:
     disease = (request.query_params.get("disease") or "").strip().lower()
     return disease in MM_ONLY_DISEASES
+
+
+def _is_fl_request(request) -> bool:
+    disease = (request.query_params.get("disease") or "").strip().lower()
+    return disease in FL_ONLY_DISEASES
 
 
 @api_view(["GET"])
@@ -78,5 +85,8 @@ def metrics(request):
     if _is_mm_request(request):
         payload["subgroup_survival"] = subgroup_survival.compute(qs)
         payload["forest_plot"] = forest_plot.compute(qs)
+
+    if _is_fl_request(request):
+        payload["transformation"] = transformation.compute(qs)
 
     return Response(payload)
