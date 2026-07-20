@@ -39,9 +39,10 @@ interface DistributionRow {
 interface Props {
   funnel: FunnelRow[]
   distribution: DistributionRow[]
+  burden?: { median_lines: number | null; ge2_pct: number; ge3_pct: number }
 }
 
-export default function TreatmentLines({ funnel, distribution }: Props) {
+export default function TreatmentLines({ funnel, distribution, burden }: Props) {
   const hasFunnel = funnel && funnel.length > 0
   const hasDist = distribution && distribution.length > 0
 
@@ -54,7 +55,21 @@ export default function TreatmentLines({ funnel, distribution }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div>
+      {burden && (
+        <div className="flex flex-wrap gap-3 mb-4">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-200 px-3 py-1 text-xs font-medium text-teal-700">
+            Median lines: <span className="font-bold">{burden.median_lines ?? '—'}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-50 border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600">
+            ≥2 lines: <span className="font-bold">{burden.ge2_pct.toFixed(1)}%</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-50 border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600">
+            ≥3 lines (heavily pre-treated): <span className="font-bold">{burden.ge3_pct.toFixed(1)}%</span>
+          </span>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-4">
       {/* Left: Funnel */}
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
@@ -136,6 +151,7 @@ export default function TreatmentLines({ funnel, distribution }: Props) {
           </div>
         )}
       </div>
+    </div>
     </div>
   )
 }

@@ -127,8 +127,10 @@ export interface MetricsResponse {
     first_line: TherapyCount[]
     second_line: TherapyCount[]
     later_line: TherapyCount[]
+    overall?: TherapyCount[]
     line_funnel: { line: number; label: string; count: number; pct: number }[]
     line_distribution: { lines: number; label: string; count: number; pct: number }[]
+    burden?: { median_lines: number | null; ge2_pct: number; ge3_pct: number }
     sequences: { sequence: string; count: number }[]
   }
   demographics: {
@@ -208,6 +210,30 @@ export interface MetricsResponse {
   incidence?: { quarter: string; diagnoses: number; treatment_starts: number }[]
   time_to_treatment?: { median_days: number|null; n: number; histogram: { label: string; count: number; lo: number; hi: number|null }[] }
   landmark_survival?: { curve: { time: number; survival: number; at_risk: number }[]; n: number; median: number|null; landmark_months: number }
+  disease_state?: {
+    states: { key: string; label: string; count: number; pct: number }[]
+    total: number
+  }
+  therapy_categories?: {
+    first_line: { category: string; count: number; pct: number }[]
+    second_line: { category: string; count: number; pct: number }[]
+    later_line: { category: string; count: number; pct: number }[]
+  }
+  pod24?: {
+    clock_start: string
+    window_months: number
+    groups: { key: string; label: string; count: number; pct: number }[]
+    os: SubgroupSurvivalLine[]
+    os_p: number | null
+  }
+  landmark_response?: {
+    clock_start: string
+    landmarks: { months: number; cr_count: number; evaluable: number; pct: number }[]
+  }
+  pathway_outcomes?: {
+    min_n: number
+    pathways: { label: string; n: number; os: SurvivalLine }[]
+  }
 }
 
 export interface ForestPlotRow {

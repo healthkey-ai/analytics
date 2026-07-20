@@ -21,6 +21,11 @@ from metrics.services import (
     cohort_characterization,
     incidence,
     time_to_treatment,
+    disease_state,
+    therapy_categories,
+    pod24,
+    landmark_response,
+    pathway_outcomes,
 )
 from metrics.services.survival import landmark_os_km
 
@@ -63,6 +68,11 @@ def metrics(request):
         "incidence":                 incidence.compute(qs),
         "time_to_treatment":         time_to_treatment.compute(qs),
         "landmark_survival":         landmark_os_km(qs),
+        "disease_state":             disease_state.compute(qs),
+        "therapy_categories":        therapy_categories.compute(qs),
+        "pod24":                     pod24.compute(qs),
+        "landmark_response":         landmark_response.compute(qs),
+        "pathway_outcomes":          pathway_outcomes.compute(qs),
     }
 
     if _is_mm_request(request):
