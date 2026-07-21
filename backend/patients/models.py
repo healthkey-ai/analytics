@@ -16,7 +16,7 @@ class SourceOrganization(models.Model):
 
 
 class PatientInfo(models.Model):
-    """Read-only mirror of promop.patient_info. managed=False — no migrations."""
+    """Read-only mirror of promop's patient_record table. managed=False — no migrations."""
 
     # demographics
     patient_age = models.IntegerField(null=True)
@@ -151,7 +151,7 @@ class PatientInfo(models.Model):
 
     class Meta:
         managed = False
-        db_table = "patient_info"
+        db_table = "patient_record"
 
     def __str__(self):
         return f"PatientInfo {self.pk} – {self.disease}"

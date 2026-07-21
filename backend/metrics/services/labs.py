@@ -30,7 +30,7 @@ def compute(qs):
             f"COUNT({f}) AS {key}_n",
         ]
 
-    sql = f"SELECT {', '.join(selects)} FROM patient_info WHERE id IN ({subq_sql})"
+    sql = f"SELECT {', '.join(selects)} FROM patient_record WHERE id IN ({subq_sql})"
 
     with connection.cursor() as cursor:
         cursor.execute(sql, params)
