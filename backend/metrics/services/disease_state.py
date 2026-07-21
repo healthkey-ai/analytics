@@ -1,7 +1,7 @@
 """
 Disease-state snapshot: derive a mutually exclusive disease state per patient.
 
-There is no explicit disease-state field on patient_info, so states are derived
+There is no explicit disease-state field on the patient record, so states are derived
 heuristically from treatment and outcome fields, in priority order:
 
 1. Relapsed/Refractory — received 2+ lines, has a recorded relapse, or had
