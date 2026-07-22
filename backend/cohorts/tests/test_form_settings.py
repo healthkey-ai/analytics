@@ -131,6 +131,19 @@ class TestFormSettingsDiseaseCounts:
         assert "ER|ERBB2 Breast cancer" not in counts
         assert "Invasive breast cancer" not in counts
 
+    def test_case_variants_merge_into_canonical_disease_name(self, api_client):
+        """'Follicular Lymphoma' and 'Follicular lymphoma' → one canonical entry."""
+        rows = [
+            {"disease": "Follicular Lymphoma", "cnt": 711},
+            {"disease": "Follicular lymphoma", "cnt": 270},
+        ]
+        with _patch_pi(rows):
+            resp = api_client.get(FORM_SETTINGS_URL)
+        counts = resp.data["disease_counts"]
+        assert counts.get("Follicular Lymphoma") == 981
+        assert "Follicular lymphoma" not in counts
+        assert resp.data["diseases"] == ["Follicular Lymphoma"]
+
     def test_empty_patient_table_returns_empty_counts_and_diseases(self, api_client):
         with _patch_pi([]):
             resp = api_client.get(FORM_SETTINGS_URL)

@@ -186,10 +186,12 @@ def form_settings(request):
     disease_config = THERAPY_MAP.get(disease, THERAPY_MAP["Multiple Myeloma"])
 
     def _normalize_disease(name):
-        """Collapse FHIR coding artifacts (e.g. 'ER|ERBB2 Breast cancer') into canonical names."""
+        """Collapse FHIR coding artifacts (e.g. 'ER|ERBB2 Breast cancer') and
+        case variants (e.g. 'Follicular lymphoma') into canonical names."""
         if "breast cancer" in name.lower():
             return "Breast Cancer"
-        return name
+        canonical = {d.lower(): d for d in THERAPY_MAP}
+        return canonical.get(name.strip().lower(), name)
 
     # Pull distinct values actually present in the DB for this disease (scoped to org)
     qs = PatientInfo.objects.filter(disease__icontains=disease)
