@@ -3,6 +3,7 @@ import datetime
 from unittest.mock import patch, MagicMock
 
 import pytest
+from django.db.models import Q
 from django.http import QueryDict
 
 
@@ -12,10 +13,12 @@ class _FakeQS:
     def __init__(self, rows=None):
         self._rows = rows or []
         self._filters = {}
+        self._q_args = []
 
     def filter(self, *args, **kwargs):
         clone = _FakeQS(self._rows)
         clone._filters = {**self._filters, **kwargs}
+        clone._q_args = self._q_args + list(args)
         return clone
 
     def exclude(self, *args, **kwargs):
@@ -58,10 +61,10 @@ def patch_patient_qs(monkeypatch):
         yield fake
 
 
-def _run_filters(params: dict) -> _FakeQS:
+def _run_filters(params: dict, **kwargs) -> _FakeQS:
     from cohorts.filters import apply_cohort_filters
     req = _make_request(params)
-    return apply_cohort_filters(req)
+    return apply_cohort_filters(req, **kwargs)
 
 
 # ── org filter ────────────────────────────────────────────────────────────────
@@ -96,6 +99,30 @@ def test_country_filter_applied_as_multi_value():
 def test_country_filter_not_applied_when_absent():
     result = _run_filters({})
     assert "country__in" not in result._filters
+
+
+# ── disease filter / transformation broadening ───────────────────────────────
+
+def test_disease_filter_is_plain_icontains_by_default():
+    result = _run_filters({"disease": "Follicular Lymphoma"})
+    assert result._filters.get("disease__icontains") == "Follicular Lymphoma"
+    assert result._q_args == []
+
+
+def test_include_transformed_broadens_disease_filter():
+    """Transformed patients have DLBCL as their current disease — the broadened
+    filter must OR the disease match with transformed_to_dlbcl=True."""
+    result = _run_filters({"disease": "Follicular Lymphoma"}, include_transformed=True)
+    assert "disease__icontains" not in result._filters
+    assert result._q_args == [
+        Q(disease__icontains="Follicular Lymphoma") | Q(transformed_to_dlbcl=True)
+    ]
+
+
+def test_include_transformed_without_disease_adds_no_filter():
+    result = _run_filters({}, include_transformed=True)
+    assert "disease__icontains" not in result._filters
+    assert result._q_args == []
 
 
 # ── stage filters ────────────────────────────────────────────────────────────

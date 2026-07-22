@@ -87,6 +87,13 @@ def metrics(request):
         payload["forest_plot"] = forest_plot.compute(qs)
 
     if _is_fl_request(request):
-        payload["transformation"] = transformation.compute(qs)
+        # Transformed patients are recorded with DLBCL as their current disease,
+        # so the cohort qs above excludes them — rebuild with them re-included
+        # or the transformation chart can never see them.
+        t_qs = apply_cohort_filters(request, include_transformed=True)
+        t_qs, err = apply_org_scope(t_qs, request.user)
+        if err:
+            return err
+        payload["transformation"] = transformation.compute(t_qs)
 
     return Response(payload)

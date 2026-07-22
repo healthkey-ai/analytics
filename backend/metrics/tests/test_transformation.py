@@ -1,4 +1,6 @@
 import datetime
+from unittest.mock import MagicMock, patch
+
 from metrics.services.transformation import compute
 
 D = datetime.date
@@ -219,3 +221,64 @@ def test_histogram_boundary_at_twelve_months():
     hist = {b["label"]: b["count"] for b in result["time_to_transformation"]["histogram"]}
     assert hist["0–12"] == 1
     assert hist["12–24"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Metrics view wiring — transformed patients have DLBCL as their current
+# disease, so the plain cohort disease filter excludes them from this chart.
+# ---------------------------------------------------------------------------
+
+_METRICS_URL = "/api/metrics/"
+
+_PAYLOAD_SERVICES = [
+    "response_rates", "treatment_patterns", "demographics", "staging", "labs",
+    "treatment_duration", "survival", "ttnt", "switching", "pathway_sunburst",
+    "dor", "cohort_characterization", "incidence", "time_to_treatment",
+    "disease_state", "therapy_categories", "pod24", "landmark_response",
+    "pathway_outcomes", "subgroup_survival", "forest_plot", "transformation",
+]
+
+
+def _run_metrics(api_client, disease):
+    """GET /api/metrics/ as staff with all payload services mocked out.
+    Returns (response, apply_cohort_filters mock, transformation.compute mock)."""
+    user = MagicMock()
+    user.is_staff = True
+    user.is_authenticated = True
+    api_client.force_authenticate(user=user)
+
+    fake_qs = MagicMock()
+    fake_qs.count.return_value = 5
+
+    service_mocks = {
+        name: MagicMock(compute=MagicMock(return_value={}))
+        for name in _PAYLOAD_SERVICES
+    }
+    with patch.multiple("metrics.views", **service_mocks,
+                        landmark_os_km=MagicMock(return_value={})), \
+         patch("metrics.views.apply_cohort_filters", return_value=fake_qs) as mock_acf:
+        resp = api_client.get(f"{_METRICS_URL}?disease={disease}")
+    return resp, mock_acf, service_mocks["transformation"].compute
+
+
+def test_fl_request_broadens_transformation_queryset(api_client):
+    """The view must rebuild the transformation queryset with
+    include_transformed=True — otherwise transformed patients (recorded with
+    DLBCL as current disease) can never appear in their own chart."""
+    resp, mock_acf, t_compute = _run_metrics(api_client, "Follicular+Lymphoma")
+
+    assert resp.status_code == 200
+    assert "transformation" in resp.data
+    calls = mock_acf.call_args_list
+    assert calls[0].kwargs == {}                              # main cohort — unbroadened
+    assert calls[1].kwargs == {"include_transformed": True}   # transformation — broadened
+    assert t_compute.call_count == 1
+
+
+def test_non_fl_request_skips_transformation(api_client):
+    resp, mock_acf, t_compute = _run_metrics(api_client, "Multiple+Myeloma")
+
+    assert resp.status_code == 200
+    assert "transformation" not in resp.data
+    t_compute.assert_not_called()
+    assert all(c.kwargs == {} for c in mock_acf.call_args_list)

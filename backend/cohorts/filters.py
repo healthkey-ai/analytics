@@ -7,12 +7,17 @@ from patients.models import PatientInfo
 from metrics.services.clinical_filters import HIGH_RISK_CYTO, HAS_SCT, NO_SCT
 
 
-def apply_cohort_filters(request) -> "QuerySet[PatientInfo]":
+def apply_cohort_filters(request, include_transformed=False) -> "QuerySet[PatientInfo]":
     """
     Build a PatientInfo queryset from GET query parameters.
 
     All multi-value params use the same key repeated, e.g. stage=ISS+Stage+I&stage=ISS+Stage+II.
     Boolean params accept "true" / "false" strings.
+
+    include_transformed: broaden the disease filter to also match patients with a
+    documented FL→DLBCL transformation (transformed_to_dlbcl=True), whose current
+    disease is recorded as DLBCL. Used by the transformation analytics — without
+    it those patients are filtered out of their own chart.
     """
     qs = PatientInfo.objects.all()
     p = request.query_params
@@ -43,7 +48,10 @@ def apply_cohort_filters(request) -> "QuerySet[PatientInfo]":
     # ── disease ───────────────────────────────────────────────────────────────
     disease = p.get("disease")
     if disease:
-        qs = qs.filter(disease__icontains=disease)
+        if include_transformed:
+            qs = qs.filter(Q(disease__icontains=disease) | Q(transformed_to_dlbcl=True))
+        else:
+            qs = qs.filter(disease__icontains=disease)
 
     # ── ISS / TNM stage ───────────────────────────────────────────────────────
     stages = _list("stage")
