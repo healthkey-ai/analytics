@@ -7,7 +7,7 @@ interface Props {
 }
 
 export default function EligibilityFunnel({ data }: Props) {
-  if (!data || data.total === 0) {
+  if (data.total === 0) {
     return (
       <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
         No data available

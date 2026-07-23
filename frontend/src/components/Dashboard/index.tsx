@@ -64,6 +64,17 @@ function NoDataPlaceholder() {
   )
 }
 
+function EligibilityCard({ data }: { data: NonNullable<MetricsResponse['eligibility']> }) {
+  return (
+    <MetricCard
+      title="Eligibility / Feasibility Counts"
+      description="How many patients fit the current profile — the cumulative count remaining after each filter group, from the full visible population down to the eligible set. De-identified aggregate counts only, for feasibility and trial-sizing questions."
+    >
+      <EligibilityFunnel data={data} />
+    </MetricCard>
+  )
+}
+
 export default function Dashboard({ metrics, loading, disease, user, onLogout, activeSavedCohortId }: Props) {
   const canExport = user.is_premium === true || user.is_staff === true
   const isMultipleMyeloma = disease === 'Multiple Myeloma'
@@ -221,12 +232,7 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
         {isEmpty ? (
           <>
             {metrics?.eligibility && metrics.eligibility.total > 0 && (
-              <MetricCard
-                title="Eligibility / Feasibility Counts"
-                description="How many patients fit the current profile — the cumulative count remaining after each filter group, from the full visible population down to the eligible set. De-identified aggregate counts only, for feasibility and trial-sizing questions."
-              >
-                <EligibilityFunnel data={metrics.eligibility} />
-              </MetricCard>
+              <EligibilityCard data={metrics.eligibility} />
             )}
             <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
               <svg className="h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -469,12 +475,7 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
             )}
 
             {metrics?.eligibility && metrics.eligibility.total > 0 && (
-              <MetricCard
-                title="Eligibility / Feasibility Counts"
-                description="How many patients fit the current profile — the cumulative count remaining after each filter group, from the full visible population down to the eligible set. De-identified aggregate counts only, for feasibility and trial-sizing questions."
-              >
-                <EligibilityFunnel data={metrics.eligibility} />
-              </MetricCard>
+              <EligibilityCard data={metrics.eligibility} />
             )}
 
             {metrics?.cohort_characterization && metrics.cohort_characterization.n > 0 && (

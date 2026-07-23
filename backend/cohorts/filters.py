@@ -22,9 +22,13 @@ def apply_cohort_filters(request, include_transformed=False, qs=None, funnel=Non
     qs: base queryset to start from (defaults to PatientInfo.objects.all()).
 
     funnel: optional list; when provided, a {"key", "label", "count"} step is
-    appended after each filter group that actually narrowed the queryset.
-    Used by the eligibility/feasibility analytics.
+    appended after each filter group for which at least one filter was applied.
+    Used by the eligibility/feasibility analytics. Requires an explicitly
+    org-scoped qs= — otherwise step counts would span every org's patients.
     """
+    if funnel is not None and qs is None:
+        raise ValueError("funnel= requires an explicitly org-scoped qs= base queryset")
+
     qs = qs if qs is not None else PatientInfo.objects.all()
     p = request.query_params
 
