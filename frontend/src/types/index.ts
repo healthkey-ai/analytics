@@ -118,6 +118,12 @@ export interface TreatmentDurationRow {
 
 export interface MetricsResponse {
   cohort: { count: number }
+  eligibility?: {
+    total: number
+    eligible: number
+    eligible_pct: number
+    steps: { key: string; label: string; count: number }[]
+  }
   response_rates: {
     first_line: TherapyOutcomes[]
     second_line: TherapyOutcomes[]

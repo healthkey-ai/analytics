@@ -38,6 +38,9 @@ class _FakeQS:
     def order_by(self, *args):
         return self
 
+    def count(self):
+        return len(self._rows)
+
 
 def _make_request(params: dict):
     """Build a minimal request-like object with QueryDict-backed query_params."""
@@ -123,6 +126,56 @@ def test_include_transformed_without_disease_adds_no_filter():
     result = _run_filters({}, include_transformed=True)
     assert "disease__icontains" not in result._filters
     assert result._q_args == []
+
+
+# ── eligibility funnel ───────────────────────────────────────────────────────
+
+def test_funnel_records_only_applied_groups_in_order(patch_patient_qs):
+    patch_patient_qs._rows = [{}] * 10
+    steps = []
+    _run_filters({"disease": "Follicular Lymphoma", "country": ["US"]}, funnel=steps)
+    assert [(s["key"], s["label"], s["count"]) for s in steps] == [
+        ("disease_stage", "Disease & stage", 10),
+        ("geography", "Geography", 10),
+    ]
+
+
+def test_funnel_records_all_groups_when_all_filters_applied(patch_patient_qs):
+    patch_patient_qs._rows = [{}] * 5
+    steps = []
+    _run_filters(
+        {
+            "disease": "Multiple Myeloma",
+            "stage": ["ISS Stage II"],
+            "age_min": 18,
+            "country": ["US"],
+            "ecog": ["1"],
+            "high_risk_cytogenetics": "true",
+            "therapy_lines_min": 1,
+            "meets_crab": "true",
+            "hemoglobin_min": 10,
+            "date": "this_year",
+        },
+        funnel=steps,
+    )
+    assert [s["key"] for s in steps] == [
+        "disease_stage", "demographics", "geography", "performance",
+        "cytogenetics", "treatment_history", "disease_characteristics",
+        "labs", "diagnosis_period",
+    ]
+
+
+def test_funnel_records_nothing_when_no_filters():
+    steps = []
+    _run_filters({}, funnel=steps)
+    assert steps == []
+
+
+def test_base_queryset_param_is_used():
+    custom = _FakeQS(rows=[{}] * 3)
+    from cohorts.filters import apply_cohort_filters
+    req = _make_request({})
+    assert apply_cohort_filters(req, qs=custom) is custom
 
 
 # ── stage filters ────────────────────────────────────────────────────────────

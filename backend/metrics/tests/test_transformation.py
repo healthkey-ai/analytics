@@ -236,6 +236,7 @@ _PAYLOAD_SERVICES = [
     "dor", "cohort_characterization", "incidence", "time_to_treatment",
     "disease_state", "therapy_categories", "pod24", "landmark_response",
     "pathway_outcomes", "subgroup_survival", "forest_plot", "transformation",
+    "eligibility",
 ]
 
 

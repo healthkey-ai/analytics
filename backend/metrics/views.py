@@ -27,6 +27,7 @@ from metrics.services import (
     landmark_response,
     pathway_outcomes,
     transformation,
+    eligibility,
 )
 from metrics.services.survival import landmark_os_km
 
@@ -56,10 +57,13 @@ def metrics(request):
 
     count = qs.count()
     if count == 0:
-        return Response({"cohort": {"count": 0}})
+        # Eligibility is still useful on an empty cohort — the funnel shows
+        # where the population dropped off.
+        return Response({"cohort": {"count": 0}, "eligibility": eligibility.compute(request)})
 
     payload = {
         "cohort":              {"count": count},
+        "eligibility":         eligibility.compute(request),
         "response_rates":      response_rates.compute(qs),
         "treatment_patterns":  treatment_patterns.compute(qs),
         "demographics":        demographics.compute(qs),
