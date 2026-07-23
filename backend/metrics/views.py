@@ -4,6 +4,7 @@ from rest_framework.response import Response
 
 from accounts.utils import apply_org_scope
 from cohorts.filters import apply_cohort_filters
+from patients.models import PatientInfo
 from metrics.services import (
     response_rates,
     treatment_patterns,
@@ -27,6 +28,7 @@ from metrics.services import (
     landmark_response,
     pathway_outcomes,
     transformation,
+    eligibility,
 )
 from metrics.services.survival import landmark_os_km
 
@@ -48,18 +50,22 @@ def _is_fl_request(request) -> bool:
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def metrics(request):
-    qs = apply_cohort_filters(request)
-
-    qs, err = apply_org_scope(qs, request.user)
+    # Org-scope the unfiltered base once and share it between the cohort qs and
+    # the eligibility funnel — scoping is several queries for non-staff users.
+    base, err = apply_org_scope(PatientInfo.objects.all(), request.user)
     if err:
         return err
 
+    qs = apply_cohort_filters(request, qs=base)
     count = qs.count()
     if count == 0:
-        return Response({"cohort": {"count": 0}})
+        # Eligibility is still useful on an empty cohort — the funnel shows
+        # where the population dropped off.
+        return Response({"cohort": {"count": 0}, "eligibility": eligibility.compute(request, base)})
 
     payload = {
         "cohort":              {"count": count},
+        "eligibility":         eligibility.compute(request, base),
         "response_rates":      response_rates.compute(qs),
         "treatment_patterns":  treatment_patterns.compute(qs),
         "demographics":        demographics.compute(qs),
@@ -90,10 +96,7 @@ def metrics(request):
         # Transformed patients are recorded with DLBCL as their current disease,
         # so the cohort qs above excludes them — rebuild with them re-included
         # or the transformation chart can never see them.
-        t_qs = apply_cohort_filters(request, include_transformed=True)
-        t_qs, err = apply_org_scope(t_qs, request.user)
-        if err:
-            return err
+        t_qs = apply_cohort_filters(request, include_transformed=True, qs=base)
         payload["transformation"] = transformation.compute(t_qs)
 
     return Response(payload)

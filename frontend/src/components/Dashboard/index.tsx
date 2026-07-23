@@ -21,6 +21,7 @@ import CohortCharacterization from '../charts/CohortCharacterization'
 import IncidenceChart from '../charts/IncidenceChart'
 import TimeToTreatment from '../charts/TimeToTreatment'
 import DiseaseStateSnapshot from '../charts/DiseaseStateSnapshot'
+import EligibilityFunnel from '../charts/EligibilityFunnel'
 import TherapyCategories from '../charts/TherapyCategories'
 import PathwayOutcomes from '../charts/PathwayOutcomes'
 import Pod24 from '../charts/Pod24'
@@ -60,6 +61,17 @@ function NoDataPlaceholder() {
     <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
       No data available
     </div>
+  )
+}
+
+function EligibilityCard({ data }: { data: NonNullable<MetricsResponse['eligibility']> }) {
+  return (
+    <MetricCard
+      title="Eligibility / Feasibility Counts"
+      description="How many patients fit the current profile — the cumulative count remaining after each filter group, from the full visible population down to the eligible set. De-identified aggregate counts only, for feasibility and trial-sizing questions."
+    >
+      <EligibilityFunnel data={data} />
+    </MetricCard>
   )
 }
 
@@ -218,14 +230,19 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
       {/* Main content */}
       <main className="p-6 space-y-6 max-w-[1400px] mx-auto">
         {isEmpty ? (
-          <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
-            <svg className="h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="M9 17v-2m3 2v-4m3 4v-6M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <p className="text-gray-500 font-medium">No patients match the current filters</p>
-            <p className="text-sm text-gray-400">Try adjusting your cohort criteria</p>
-          </div>
+          <>
+            {metrics?.eligibility && metrics.eligibility.total > 0 && (
+              <EligibilityCard data={metrics.eligibility} />
+            )}
+            <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+              <svg className="h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M9 17v-2m3 2v-4m3 4v-6M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-gray-500 font-medium">No patients match the current filters</p>
+              <p className="text-sm text-gray-400">Try adjusting your cohort criteria</p>
+            </div>
+          </>
         ) : tab === 'outcomes' ? (
           <>
             <MetricCard
@@ -455,6 +472,10 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               >
                 <DiseaseStateSnapshot data={metrics.disease_state} />
               </MetricCard>
+            )}
+
+            {metrics?.eligibility && metrics.eligibility.total > 0 && (
+              <EligibilityCard data={metrics.eligibility} />
             )}
 
             {metrics?.cohort_characterization && metrics.cohort_characterization.n > 0 && (

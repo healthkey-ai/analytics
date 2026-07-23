@@ -7,6 +7,37 @@ from django.db.models import Q
 from django.http import QueryDict
 
 
+def _matches(row, kwargs):
+    """Evaluate simple field lookups against a dict row.
+
+    Supports exact, in, icontains, iexact, gte, lte. Q objects arrive as
+    positional args and do not narrow here — sufficient for the funnel tests,
+    which need counts that actually decrease under filtering.
+    """
+    for key, val in kwargs.items():
+        field, _, lookup = key.partition("__")
+        v = row.get(field)
+        if lookup in ("", "exact"):
+            if v != val:
+                return False
+        elif lookup == "in":
+            if v not in val:
+                return False
+        elif lookup == "icontains":
+            if v is None or str(val).lower() not in str(v).lower():
+                return False
+        elif lookup == "iexact":
+            if v is None or str(v).lower() != str(val).lower():
+                return False
+        elif lookup == "gte":
+            if v is None or v < val:
+                return False
+        elif lookup == "lte":
+            if v is None or v > val:
+                return False
+    return True
+
+
 class _FakeQS:
     """Minimal queryset mock for testing apply_cohort_filters."""
 
@@ -16,7 +47,7 @@ class _FakeQS:
         self._q_args = []
 
     def filter(self, *args, **kwargs):
-        clone = _FakeQS(self._rows)
+        clone = _FakeQS([r for r in self._rows if _matches(r, kwargs)])
         clone._filters = {**self._filters, **kwargs}
         clone._q_args = self._q_args + list(args)
         return clone
@@ -37,6 +68,9 @@ class _FakeQS:
 
     def order_by(self, *args):
         return self
+
+    def count(self):
+        return len(self._rows)
 
 
 def _make_request(params: dict):
@@ -123,6 +157,74 @@ def test_include_transformed_without_disease_adds_no_filter():
     result = _run_filters({}, include_transformed=True)
     assert "disease__icontains" not in result._filters
     assert result._q_args == []
+
+
+# ── eligibility funnel ───────────────────────────────────────────────────────
+
+def test_funnel_counts_reflect_cumulative_narrowing(patch_patient_qs):
+    """Step counts must decrease as each filter group narrows the population —
+    guards against recording steps on the pre-filter queryset."""
+    patch_patient_qs._rows = [
+        {"disease": "Follicular Lymphoma", "country": "US"},
+        {"disease": "Follicular Lymphoma", "country": "US"},
+        {"disease": "Follicular Lymphoma", "country": "GB"},
+        {"disease": "Multiple Myeloma", "country": "US"},
+    ]
+    steps = []
+    _run_filters({"disease": "Follicular Lymphoma", "country": ["US"]},
+                 qs=patch_patient_qs, funnel=steps)
+    assert [(s["key"], s["label"], s["count"]) for s in steps] == [
+        ("disease_stage", "Disease & stage", 3),
+        ("geography", "Geography", 2),
+    ]
+
+
+def test_funnel_records_all_groups_when_all_filters_applied(patch_patient_qs):
+    patch_patient_qs._rows = [{}] * 5
+    steps = []
+    _run_filters(
+        {
+            "disease": "Multiple Myeloma",
+            "stage": ["ISS Stage II"],
+            "age_min": 18,
+            "country": ["US"],
+            "ecog": ["1"],
+            "high_risk_cytogenetics": "true",
+            "therapy_lines_min": 1,
+            "meets_crab": "true",
+            "hemoglobin_min": 10,
+            "date": "this_year",
+        },
+        qs=patch_patient_qs,
+        funnel=steps,
+    )
+    assert [s["key"] for s in steps] == [
+        "disease_stage", "demographics", "geography", "performance",
+        "cytogenetics", "treatment_history", "disease_characteristics",
+        "labs", "diagnosis_period",
+    ]
+
+
+def test_funnel_records_nothing_when_no_filters(patch_patient_qs):
+    steps = []
+    _run_filters({}, qs=patch_patient_qs, funnel=steps)
+    assert steps == []
+
+
+def test_base_queryset_param_is_used():
+    custom = _FakeQS(rows=[{}] * 3)
+    from cohorts.filters import apply_cohort_filters
+    req = _make_request({})
+    assert apply_cohort_filters(req, qs=custom) is custom
+
+
+def test_funnel_without_base_queryset_raises():
+    """funnel= without an org-scoped qs= would count across every org's
+    patients — must fail loudly rather than leak cross-org aggregates."""
+    from cohorts.filters import apply_cohort_filters
+    req = _make_request({"disease": "Multiple Myeloma"})
+    with pytest.raises(ValueError, match="org-scoped"):
+        apply_cohort_filters(req, funnel=[])
 
 
 # ── stage filters ────────────────────────────────────────────────────────────

@@ -236,6 +236,7 @@ _PAYLOAD_SERVICES = [
     "dor", "cohort_characterization", "incidence", "time_to_treatment",
     "disease_state", "therapy_categories", "pod24", "landmark_response",
     "pathway_outcomes", "subgroup_survival", "forest_plot", "transformation",
+    "eligibility",
 ]
 
 
@@ -247,6 +248,7 @@ def _run_metrics(api_client, disease):
     user.is_authenticated = True
     api_client.force_authenticate(user=user)
 
+    fake_base = MagicMock()
     fake_qs = MagicMock()
     fake_qs.count.return_value = 5
 
@@ -256,29 +258,30 @@ def _run_metrics(api_client, disease):
     }
     with patch.multiple("metrics.views", **service_mocks,
                         landmark_os_km=MagicMock(return_value={})), \
+         patch("metrics.views.apply_org_scope", return_value=(fake_base, None)), \
          patch("metrics.views.apply_cohort_filters", return_value=fake_qs) as mock_acf:
         resp = api_client.get(f"{_METRICS_URL}?disease={disease}")
-    return resp, mock_acf, service_mocks["transformation"].compute
+    return resp, mock_acf, service_mocks["transformation"].compute, fake_base
 
 
 def test_fl_request_broadens_transformation_queryset(api_client):
     """The view must rebuild the transformation queryset with
     include_transformed=True — otherwise transformed patients (recorded with
     DLBCL as current disease) can never appear in their own chart."""
-    resp, mock_acf, t_compute = _run_metrics(api_client, "Follicular+Lymphoma")
+    resp, mock_acf, t_compute, fake_base = _run_metrics(api_client, "Follicular+Lymphoma")
 
     assert resp.status_code == 200
     assert "transformation" in resp.data
     calls = mock_acf.call_args_list
-    assert calls[0].kwargs == {}                              # main cohort — unbroadened
-    assert calls[1].kwargs == {"include_transformed": True}   # transformation — broadened
+    assert calls[0].kwargs == {"qs": fake_base}                              # main cohort — unbroadened
+    assert calls[1].kwargs == {"include_transformed": True, "qs": fake_base}  # transformation — broadened
     assert t_compute.call_count == 1
 
 
 def test_non_fl_request_skips_transformation(api_client):
-    resp, mock_acf, t_compute = _run_metrics(api_client, "Multiple+Myeloma")
+    resp, mock_acf, t_compute, fake_base = _run_metrics(api_client, "Multiple+Myeloma")
 
     assert resp.status_code == 200
     assert "transformation" not in resp.data
     t_compute.assert_not_called()
-    assert all(c.kwargs == {} for c in mock_acf.call_args_list)
+    assert all(c.kwargs == {"qs": fake_base} for c in mock_acf.call_args_list)
