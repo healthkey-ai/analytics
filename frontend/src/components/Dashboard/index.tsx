@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import type { MetricsResponse, User } from '../../types'
+import type { CohortFilters, MetricsResponse, User } from '../../types'
 import MetricCard from '../ui/MetricCard'
 import ResponseRates from '../charts/ResponseRates'
 import TreatmentPatterns from '../charts/TreatmentPatterns'
@@ -36,6 +36,7 @@ interface Props {
   user: User
   onLogout: () => void
   activeSavedCohortId: number | null
+  filters: CohortFilters
 }
 
 type DashboardTab    = 'outcomes' | 'treatments' | 'profile'
@@ -64,18 +65,19 @@ function NoDataPlaceholder() {
   )
 }
 
-function EligibilityCard({ data }: { data: NonNullable<MetricsResponse['eligibility']> }) {
+function EligibilityCard({ data, onExport }: { data: NonNullable<MetricsResponse['eligibility']>; onExport?: (format: 'csv' | 'json') => void }) {
   return (
     <MetricCard
       title="Eligibility / Feasibility Counts"
       description="How many patients fit the current profile — the cumulative count remaining after each filter group, from the full visible population down to the eligible set. De-identified aggregate counts only, for feasibility and trial-sizing questions."
+      onExport={onExport}
     >
       <EligibilityFunnel data={data} />
     </MetricCard>
   )
 }
 
-export default function Dashboard({ metrics, loading, disease, user, onLogout, activeSavedCohortId }: Props) {
+export default function Dashboard({ metrics, loading, disease, user, onLogout, activeSavedCohortId, filters }: Props) {
   const canExport = user.is_premium === true || user.is_staff === true || user.role === 'admin'
   const isMultipleMyeloma = disease === 'Multiple Myeloma'
   const isFollicularLymphoma = disease === 'Follicular Lymphoma'
@@ -116,6 +118,49 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
     { id: 'treatments', label: 'Treatments' },
     { id: 'profile',    label: 'Patient Profile' },
   ]
+
+  function toFilterParams(): URLSearchParams {
+    const p = new URLSearchParams()
+    for (const [key, val] of Object.entries(filters)) {
+      if (val === undefined || val === null || val === '') continue
+      if (Array.isArray(val)) {
+        val.forEach((v: string | number) => p.append(key, String(v)))
+      } else {
+        p.set(key, String(val))
+      }
+    }
+    return p
+  }
+
+  function chartExportHandler(chartKey: string): (format: 'csv' | 'json') => void {
+    return async (format: 'csv' | 'json') => {
+      const p = toFilterParams()
+      p.set('chart', chartKey)
+      p.set('file_format', format)
+      try {
+        if (format === 'csv') {
+          const resp = await api.get(`/metrics/export/?${p.toString()}`, { responseType: 'blob' })
+          const url = URL.createObjectURL(new Blob([resp.data]))
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `${chartKey}_export.csv`
+          a.click()
+          URL.revokeObjectURL(url)
+        } else {
+          const resp = await api.get(`/metrics/export/?${p.toString()}`)
+          const blob = new Blob([JSON.stringify(resp.data, null, 2)], { type: 'application/json' })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `${chartKey}_export.json`
+          a.click()
+          URL.revokeObjectURL(url)
+        }
+      } catch {
+        alert('Export failed. Please try again.')
+      }
+    }
+  }
 
   async function handleExport(format: 'csv' | 'json') {
     setShowExportMenu(false)
@@ -232,7 +277,7 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
         {isEmpty ? (
           <>
             {metrics?.eligibility && metrics.eligibility.total > 0 && (
-              <EligibilityCard data={metrics.eligibility} />
+              <EligibilityCard data={metrics.eligibility} onExport={canExport ? chartExportHandler('eligibility') : undefined} />
             )}
             <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
               <svg className="h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -248,7 +293,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
             <MetricCard
               title="Progression-Free Survival"
               description="Kaplan-Meier curve showing the probability of patients remaining progression-free or alive over time from first-line therapy start. The median PFS is the time point at which 50% of patients have experienced progression or death. Shaded area represents the 95% confidence interval."
-            >
+            
+              onExport={canExport ? chartExportHandler('survival') : undefined}>
               {metrics?.survival ? <SurvivalCurves data={metrics.survival} /> : <NoDataPlaceholder />}
             </MetricCard>
 
@@ -256,7 +302,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               <MetricCard
                 title="Survival by Subgroup"
                 description="Kaplan-Meier survival curves stratified by ISS disease stage, cytogenetic risk (high-risk vs. standard-risk), and SCT history. Patients without a cytogenetics workup are excluded from the risk subgroups. Enables side-by-side comparison of outcomes across biologically distinct patient populations."
-              >
+              
+              onExport={canExport ? chartExportHandler('subgroup_survival') : undefined}>
                 {metrics?.subgroup_survival
                   ? <SubgroupSurvival data={metrics.subgroup_survival} />
                   : <NoDataPlaceholder />}
@@ -267,7 +314,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               <MetricCard
                 title={`Landmark Overall Survival (${metrics.landmark_survival.landmark_months}-month landmark, n = ${metrics.landmark_survival.n})`}
                 description="Overall survival measured from a fixed landmark time point, including only patients who were alive and event-free at that point. This method eliminates early-death bias and estimates survival conditional on reaching the landmark — a standard technique when comparing outcomes across different treatment eras."
-              >
+              
+              onExport={canExport ? chartExportHandler('landmark_survival') : undefined}>
                 <SurvivalCurves data={{
                   os:  metrics.landmark_survival,
                   pfs: { curve: [], n: 0, median: null },
@@ -279,7 +327,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
             <MetricCard
               title="Response Rates"
               description="Best response to therapy across each treatment line (1st, 2nd, 3rd+). Responses are classified by depth: sCR (stringent complete response), CR (complete response), VGPR (very good partial response), PR (partial response), SD (stable disease), and PD (progressive disease), per standard disease-specific criteria."
-            >
+            
+              onExport={canExport ? chartExportHandler('response_rates') : undefined}>
               <div className="flex gap-1 rounded-lg border border-gray-200 p-0.5 bg-gray-50 w-fit mb-4">
                 {(['1L', '2L', '3L+'] as ResponseLineTab[]).map((t) => (
                   <button
@@ -307,7 +356,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               <MetricCard
                 title="POD24 Split"
                 description="Separates patients who progressed within 24 months of starting first-line therapy (POD24) — a group with markedly worse outcomes in follicular lymphoma — from those who did not, and compares overall survival from the 24-month landmark between the two groups. The clock starts at first-line treatment start, stated explicitly because landmark definitions vary. Patients censored before 24 months without an event are unevaluable."
-              >
+              
+              onExport={canExport ? chartExportHandler('pod24') : undefined}>
                 <Pod24 data={metrics.pod24} />
               </MetricCard>
             )}
@@ -316,7 +366,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               <MetricCard
                 title="Complete Response by Landmark (CR30)"
                 description="Proportion of evaluable first-line patients who achieved a complete response within 12, 24, 30, or 36 months of starting first-line therapy. CR30 (complete response at 30 months) is a follicular-lymphoma-specific depth-of-response measure. The clock starts at first-line treatment start."
-              >
+              
+              onExport={canExport ? chartExportHandler('landmark_response') : undefined}>
                 <LandmarkResponse data={metrics.landmark_response} />
               </MetricCard>
             )}
@@ -325,7 +376,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               <MetricCard
                 title="Outcomes by Treatment Pathway"
                 description="Overall survival compared across the most common first-line → second-line pathway combinations in the cohort (e.g. BR → R-CHOP vs R-CHOP → R²). Only pathways with enough patients are shown — small pathways produce unreliable curves."
-              >
+              
+              onExport={canExport ? chartExportHandler('pathway_outcomes') : undefined}>
                 <PathwayOutcomes data={metrics.pathway_outcomes} />
               </MetricCard>
             )}
@@ -334,7 +386,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               <MetricCard
                 title="Transformation to Aggressive Lymphoma (DLBCL)"
                 description="Histologic transformation of follicular lymphoma to DLBCL — a clinically pivotal event. Shows how many patients transformed, when (months from diagnosis), and how they did afterward: outcome distribution and overall survival measured from the transformation date. Shown only where a transformation is documented; not every patient is biopsied at progression, so the true rate may be higher."
-              >
+              
+              onExport={canExport ? chartExportHandler('transformation') : undefined}>
                 <TransformationChart data={metrics.transformation} />
               </MetricCard>
             )}
@@ -342,7 +395,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
             <MetricCard
               title="Duration of Response (DOR)"
               description="Time from first documented response (≥PR) to disease progression or death among patients who responded to therapy. Presented as a Kaplan-Meier curve for responders only. DOR measures the durability of treatment benefit and complements overall response rate — a high ORR with short DOR indicates transient rather than sustained disease control."
-            >
+            
+              onExport={canExport ? chartExportHandler('dor') : undefined}>
               {metrics?.dor ? <DurationOfResponse data={metrics.dor} /> : <NoDataPlaceholder />}
             </MetricCard>
 
@@ -350,7 +404,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               <MetricCard
                 title="Subgroup Forest Plot — Overall Survival"
                 description="Hazard ratios (HR) for overall survival across prespecified subgroups. Each row shows the HR and 95% confidence interval for a subgroup relative to its complement. An HR < 1 (left of center) indicates better survival in that subgroup. Wide confidence intervals reflect small sample sizes within the subgroup."
-              >
+              
+              onExport={canExport ? chartExportHandler('forest_plot') : undefined}>
                 <ForestPlot data={metrics?.forest_plot ?? []} />
               </MetricCard>
             )}
@@ -361,7 +416,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
             <MetricCard
               title="Treatment Pathways (OHDSI-Style)"
               description="Visualizes real-world treatment sequences using the OHDSI Treatment Pathways methodology. The sunburst chart shows how patients flow through lines of therapy, with each ring representing a successive treatment line and segment size proportional to patient count. The Sankey diagram shows the same flows as directed transitions, making it easy to identify the most common sequencing patterns."
-            >
+            
+              onExport={canExport ? chartExportHandler('pathway_sunburst') : undefined}>
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Pathway Sunburst</h3>
@@ -383,7 +439,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               <MetricCard
                 title="Treatment Patterns by Line"
                 description="Distribution of regimens used in the cohort, ranked by frequency, broken down by line of therapy. The Overall tab shows how many patients received each regimen in any line (a patient counts once per regimen). Helps identify dominant treatment approaches and variation in prescribing practice across lines."
-              >
+              
+              onExport={canExport ? chartExportHandler('treatment_patterns') : undefined}>
                 <div className="flex gap-1 rounded-lg border border-gray-200 p-0.5 bg-gray-50 w-fit mb-4">
                   {(['1L', '2L', '3L+', 'overall'] as PatternLineTab[]).map((t) => (
                     <button
@@ -402,7 +459,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               <MetricCard
                 title="Lines of Therapy & Treatment Burden"
                 description="How heavily pre-treated the cohort is: median lines of therapy received and the share of patients reaching two or more (and three or more) lines. Left: a funnel showing how many patients advanced to each successive line of therapy, illustrating attrition as treatment progresses. Right: distribution of the total number of treatment lines each patient received."
-              >
+              
+              onExport={canExport ? chartExportHandler('treatment_patterns') : undefined}>
                 <TreatmentLines
                   funnel={metrics?.treatment_patterns?.line_funnel ?? []}
                   distribution={metrics?.treatment_patterns?.line_distribution ?? []}
@@ -415,7 +473,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
             <MetricCard
               title="Therapy Categories by Line"
               description="Regimens grouped into therapy categories — bispecific antibodies, CAR-T, chemotherapy-containing, immunomodulatory (IMiD), monoclonal antibodies, targeted/small-molecule, and endocrine therapies — shown per line of therapy. Combination regimens can belong to more than one category (e.g. R-CHOP is both chemotherapy-containing and a monoclonal-antibody regimen), so percentages need not sum to 100."
-            >
+            
+              onExport={canExport ? chartExportHandler('treatment_patterns') : undefined}>
               {metrics?.therapy_categories
                 ? <TherapyCategories data={metrics.therapy_categories} />
                 : <NoDataPlaceholder />}
@@ -426,13 +485,15 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               <MetricCard
                 title="Treatment Duration"
                 description="Median time on therapy for each treatment line, calculated from line start date to end date (or last follow-up if ongoing). Longer duration indicates better tolerability or sustained disease control. Box plots show the interquartile range; whiskers extend to the 5th and 95th percentiles."
-              >
+              
+              onExport={canExport ? chartExportHandler('treatment_duration') : undefined}>
                 {metrics?.treatment_duration ? <TreatmentDuration data={metrics.treatment_duration} /> : <NoDataPlaceholder />}
               </MetricCard>
               <MetricCard
                 title="Top Treatment Sequences"
                 description="The most common multi-line treatment sequences observed in the cohort (e.g., VRd → Kd → DPd). Each sequence lists the regimens in order of administration; the count shows how many patients followed that exact path. Reveals dominant sequencing patterns and how often patients return to earlier drug classes."
-              >
+              
+              onExport={canExport ? chartExportHandler('treatment_patterns') : undefined}>
                 <Sequences sequences={metrics?.treatment_patterns?.sequences ?? []} />
               </MetricCard>
             </div>
@@ -440,7 +501,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
             <MetricCard
               title="Time to First Treatment"
               description="Distribution of time (in days) from diagnosis date to start of first-line therapy. Short intervals suggest prompt initiation; long intervals may reflect watchful waiting, delayed diagnosis, or access barriers. The histogram shows the count of patients in each time bucket; the median and IQR are annotated."
-            >
+            
+              onExport={canExport ? chartExportHandler('time_to_treatment') : undefined}>
               {metrics?.time_to_treatment
                 ? <TimeToTreatment data={metrics.time_to_treatment} />
                 : <NoDataPlaceholder />}
@@ -451,13 +513,15 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               <MetricCard
                 title="Time to Next Treatment (TTNT)"
                 description="Kaplan-Meier estimate of time from end of one therapy to initiation of the next. TTNT is a real-world surrogate for time to progression that avoids dependence on formal response assessments — treatment change serves as the event. Shorter TTNT indicates faster progression or toxicity-driven discontinuation."
-              >
+              
+              onExport={canExport ? chartExportHandler('ttnt') : undefined}>
                 {metrics?.ttnt ? <TTNT data={metrics.ttnt} /> : <NoDataPlaceholder />}
               </MetricCard>
               <MetricCard
                 title="Treatment Switching Patterns"
                 description="Flow diagram showing transitions between regimens across treatment lines. The width of each flow is proportional to the number of patients making that switch. Highlights which drug classes patients move to after each line and identifies the most common escape pathways following treatment failure."
-              >
+              
+              onExport={canExport ? chartExportHandler('switching') : undefined}>
                 {metrics?.switching ? <Switching data={metrics.switching} /> : <NoDataPlaceholder />}
               </MetricCard>
             </div>
@@ -469,20 +533,22 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
               <MetricCard
                 title="Disease-State Snapshot"
                 description="At-a-glance breakdown of where patients are in their disease journey: newly diagnosed, on watch-and-wait, in remission, or relapsed/refractory. States are derived from treatment history and outcomes (no explicit field exists): relapsed/refractory = 2+ lines, a recorded relapse, any later-line therapy recorded, or progressive disease; in remission = responded to first-line with no later line; watch-and-wait = diagnosed over 6 months ago and never treated; newly diagnosed = diagnosed within the last 6 months and not yet treated."
-              >
+              
+              onExport={canExport ? chartExportHandler('disease_state') : undefined}>
                 <DiseaseStateSnapshot data={metrics.disease_state} />
               </MetricCard>
             )}
 
             {metrics?.eligibility && metrics.eligibility.total > 0 && (
-              <EligibilityCard data={metrics.eligibility} />
+              <EligibilityCard data={metrics.eligibility} onExport={canExport ? chartExportHandler('eligibility') : undefined} />
             )}
 
             {metrics?.cohort_characterization && metrics.cohort_characterization.n > 0 && (
               <MetricCard
                 title="Cohort Characterization (Table 1)"
                 description="Summary of baseline patient characteristics in the standard clinical research 'Table 1' format. Continuous variables are reported as median (IQR); categorical variables as count (%). Provides a quick audit of cohort composition — demographics, disease stage, performance status, comorbidities, and key lab values — before interpreting outcomes data."
-              >
+              
+              onExport={canExport ? chartExportHandler('cohort_characterization') : undefined}>
                 <CohortCharacterization data={metrics.cohort_characterization} />
               </MetricCard>
             )}
@@ -490,7 +556,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
             <MetricCard
               title="New Diagnoses & Treatment Starts Over Time"
               description="Monthly or quarterly counts of new diagnoses and first-line treatment initiations plotted over the observation period. Useful for identifying enrollment trends, seasonal patterns, or changes in diagnostic practice. A growing gap between diagnosis and treatment-start lines may signal delayed care access over time."
-            >
+            
+              onExport={canExport ? chartExportHandler('incidence') : undefined}>
               {metrics?.incidence && metrics.incidence.length > 0
                 ? <IncidenceChart data={metrics.incidence} />
                 : <NoDataPlaceholder />}
@@ -499,21 +566,24 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
             <MetricCard
               title="Patient Demographics"
               description="Distribution of age, sex, race, and ethnicity across the cohort. Age is shown as a histogram; categorical variables as proportional bar charts. Demographic composition affects generalizability — a cohort skewed toward younger or healthier patients may not reflect real-world outcomes in a broader population."
-            >
+            
+              onExport={canExport ? chartExportHandler('demographics') : undefined}>
               {metrics?.demographics ? <Demographics data={metrics.demographics} /> : <NoDataPlaceholder />}
             </MetricCard>
 
             <MetricCard
               title="Disease Staging & Characteristics"
               description="Distribution of ISS/R-ISS staging, cytogenetic risk groups (high-risk vs. standard-risk), SCT eligibility and history, CRAB criteria, and other disease-defining characteristics at baseline. Higher proportions of ISS Stage III or high-risk cytogenetics indicate a more aggressive disease population."
-            >
+            
+              onExport={canExport ? chartExportHandler('staging') : undefined}>
               {metrics?.staging ? <StagingPanel data={metrics.staging} /> : <NoDataPlaceholder />}
             </MetricCard>
 
             <MetricCard
               title="Laboratory Values at Baseline"
               description="Key lab values recorded at or near diagnosis: M-protein (serum and urine), beta-2 microglobulin, creatinine, hemoglobin, LDH, calcium, and others. Values are shown as box plots (median, IQR, range). Reference ranges are overlaid where applicable; values outside normal limits are highlighted in red."
-            >
+            
+              onExport={canExport ? chartExportHandler('labs') : undefined}>
               {metrics?.labs ? <LabsPanel data={metrics.labs} /> : <NoDataPlaceholder />}
             </MetricCard>
           </>

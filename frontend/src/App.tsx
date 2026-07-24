@@ -92,6 +92,7 @@ function AuthenticatedApp({ auth }: { auth: AuthState }) {
           user={auth.user!}
           onLogout={auth.logout}
           activeSavedCohortId={activeSavedCohortId}
+          filters={filters}
         />
       </main>
     </div>
