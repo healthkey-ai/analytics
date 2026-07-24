@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import type { CohortFilters, MetricsResponse, User } from '../../types'
+import { useOutsideClick } from '../../hooks/useOutsideClick'
 import MetricCard from '../ui/MetricCard'
 import ResponseRates from '../charts/ResponseRates'
 import TreatmentPatterns from '../charts/TreatmentPatterns'
@@ -86,18 +87,7 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
   const [patternTab, setPatternTab]   = useState<PatternLineTab>('1L')
   const [showExportMenu, setShowExportMenu] = useState(false)
   const exportMenuRef = useRef<HTMLDivElement>(null)
-
-  // Close export dropdown on outside click
-  useEffect(() => {
-    if (!showExportMenu) return
-    function close(e: MouseEvent) {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
-        setShowExportMenu(false)
-      }
-    }
-    document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
-  }, [showExportMenu])
+  useOutsideClick(exportMenuRef, () => setShowExportMenu(false), showExportMenu)
 
   const cohortCount = metrics?.cohort?.count ?? 0
   const isEmpty     = !loading && metrics !== null && cohortCount === 0
@@ -147,9 +137,8 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
           a.click()
           URL.revokeObjectURL(url)
         } else {
-          const resp = await api.get(`/metrics/export/?${p.toString()}`)
-          const blob = new Blob([JSON.stringify(resp.data, null, 2)], { type: 'application/json' })
-          const url = URL.createObjectURL(blob)
+          const resp = await api.get(`/metrics/export/?${p.toString()}`, { responseType: 'blob' })
+          const url = URL.createObjectURL(new Blob([resp.data], { type: 'application/json' }))
           const a = document.createElement('a')
           a.href = url
           a.download = `${chartKey}_export.json`

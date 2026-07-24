@@ -22,6 +22,7 @@ from cohorts.saved_views import EXPORT_FIELDS
 from patients.models import PatientInfo
 
 MAX_EXPORT_ROWS = 50_000
+MAX_JSON_ROWS   = 5_000
 
 
 class ChartExportRateThrottle(UserRateThrottle):
@@ -165,13 +166,13 @@ CHART_EXPORT_FIELDS = {
 }
 
 
-def _csv_stream(qs, fields):
+def _csv_stream(qs, fields, max_rows=MAX_EXPORT_ROWS):
     """Yield CSV rows one at a time to avoid loading the full dataset into memory."""
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=fields, extrasaction="ignore")
     writer.writeheader()
     yield buf.getvalue()
-    for obj in qs.values(*fields).iterator(chunk_size=2000):
+    for obj in qs[:max_rows].values(*fields).iterator(chunk_size=2000):
         buf.seek(0)
         buf.truncate()
         row = {k: v.isoformat() if hasattr(v, "isoformat") else v for k, v in obj.items()}
@@ -186,7 +187,7 @@ def chart_export(request):
     chart = request.query_params.get("chart", "").strip()
     if not chart or chart not in CHART_EXPORT_FIELDS:
         return Response(
-            {"detail": f"Unknown chart '{chart}'. Valid values: {sorted(CHART_EXPORT_FIELDS)}."},
+            {"detail": f"Unknown chart '{chart}'."},
             status=400,
         )
 
@@ -197,25 +198,26 @@ def chart_export(request):
             status=400,
         )
 
-    # Build filtered queryset using the same cohort filter params as the metrics view.
-    qs = apply_cohort_filters(request)
-
+    # Apply org scope first so cohort filters operate on a pre-scoped queryset,
+    # preventing a user-supplied org= param from touching rows outside their org.
+    qs = PatientInfo.objects.all()
     qs, err = apply_org_scope(qs, request.user)
     if err:
         return err
+    qs = apply_cohort_filters(request, qs=qs)
 
     fields = CHART_EXPORT_FIELDS[chart]
 
     if file_format == "json":
         rows = []
-        for obj in qs[:MAX_EXPORT_ROWS].values(*fields).iterator(chunk_size=2000):
+        for obj in qs[:MAX_JSON_ROWS].values(*fields).iterator(chunk_size=2000):
             row = {k: v.isoformat() if hasattr(v, "isoformat") else v for k, v in obj.items()}
             rows.append(row)
         return JsonResponse({"rows": rows})
 
     # CSV — stream row-by-row
     response = StreamingHttpResponse(
-        _csv_stream(qs[:MAX_EXPORT_ROWS], fields),
+        _csv_stream(qs, fields),
         content_type="text/csv",
     )
     response["Content-Disposition"] = f'attachment; filename="chart-{chart}.csv"'

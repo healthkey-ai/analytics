@@ -7,7 +7,21 @@ from unittest.mock import MagicMock, patch
 import pytest
 from rest_framework.test import APIClient
 
-EXPORT_URL = "/api/export/"
+from django.urls import reverse
+
+from cohorts.saved_views import EXPORT_FIELDS as _SAFE_EXPORT_FIELDS
+from metrics.export_views import CHART_EXPORT_FIELDS as _CHART_FIELDS
+
+# Validate at import time that no chart key exposes fields outside the PII allowlist.
+_SAFE_SET = set(_SAFE_EXPORT_FIELDS)
+for _chart_key, _chart_fields in _CHART_FIELDS.items():
+    _unsafe = set(_chart_fields) - _SAFE_SET
+    assert not _unsafe, (
+        f"CHART_EXPORT_FIELDS['{_chart_key}'] contains fields not in EXPORT_FIELDS "
+        f"allowlist: {_unsafe}. Add to EXPORT_FIELDS only after privacy review."
+    )
+
+EXPORT_URL = reverse("chart_export")
 
 
 def _export_url(chart, fmt="csv"):

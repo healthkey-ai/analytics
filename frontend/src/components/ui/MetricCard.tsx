@@ -1,27 +1,18 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
+import { useOutsideClick } from '../../hooks/useOutsideClick'
 
 interface Props {
   title: string
   children: React.ReactNode
   className?: string
   description?: string
-  onExport?: (format: 'csv' | 'json') => void
+  onExport?: (format: 'csv' | 'json') => void | Promise<void>
 }
 
 export default function MetricCard({ title, children, className = '', description, onExport }: Props) {
   const [showExportMenu, setShowExportMenu] = useState(false)
   const exportMenuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!showExportMenu) return
-    function close(e: MouseEvent) {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
-        setShowExportMenu(false)
-      }
-    }
-    document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
-  }, [showExportMenu])
+  useOutsideClick(exportMenuRef, () => setShowExportMenu(false), showExportMenu)
 
   function handleFormatClick(format: 'csv' | 'json') {
     setShowExportMenu(false)
