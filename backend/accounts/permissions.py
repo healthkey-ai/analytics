@@ -1,4 +1,5 @@
 from rest_framework.permissions import BasePermission
+from .utils import has_org_admin_access
 
 
 class IsPremiumOrStaff(BasePermission):
@@ -12,4 +13,9 @@ class IsPremiumOrStaff(BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        return getattr(request.user, 'is_premium', False) or request.user.is_staff or getattr(request.user, 'is_superuser', False)
+        return (
+            getattr(request.user, "is_premium", False)
+            or request.user.is_staff
+            or getattr(request.user, "is_superuser", False)
+            or has_org_admin_access(request.user)
+        )

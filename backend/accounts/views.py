@@ -10,6 +10,7 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework import status
 
 from .models import Identity, Organization
+from .utils import has_org_admin_access
 
 
 class _EmailAlreadyExists(Exception):
@@ -134,11 +135,13 @@ def my_orgs_view(request):
 
 def _user_data(user):
     is_premium = getattr(user, "is_premium", False)
+    is_org_admin = has_org_admin_access(user)
     return {
         "uid":        user.uid,
         "email":      user.email,
         "name":       user.name,
         "is_staff":   user.is_staff,
         "is_premium": is_premium,
+        "is_org_admin": is_org_admin,
         "role":       "admin" if user.is_superuser else "staff" if user.is_staff else "user",
     }

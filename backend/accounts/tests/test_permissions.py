@@ -1,5 +1,5 @@
 """Tests for IsPremiumOrStaff permission."""
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from accounts.permissions import IsPremiumOrStaff
 
 
@@ -15,15 +15,24 @@ def _make_request(is_premium=False, is_staff=False, is_superuser=False, is_authe
 
 
 def test_plain_user_denied():
-    assert IsPremiumOrStaff().has_permission(_make_request(), None) is False
+    with patch("accounts.permissions.has_org_admin_access", return_value=False):
+        assert IsPremiumOrStaff().has_permission(_make_request(), None) is False
 
 
 def test_premium_user_allowed():
-    assert IsPremiumOrStaff().has_permission(_make_request(is_premium=True), None) is True
+    with patch("accounts.permissions.has_org_admin_access", return_value=False):
+        assert IsPremiumOrStaff().has_permission(_make_request(is_premium=True), None) is True
 
 
 def test_staff_user_allowed():
-    assert IsPremiumOrStaff().has_permission(_make_request(is_staff=True), None) is True
+    with patch("accounts.permissions.has_org_admin_access", return_value=False):
+        assert IsPremiumOrStaff().has_permission(_make_request(is_staff=True), None) is True
+
+
+@patch("accounts.permissions.has_org_admin_access", return_value=True)
+def test_org_admin_user_allowed(mock_has_org_admin_access):
+    assert IsPremiumOrStaff().has_permission(_make_request(), None) is True
+    mock_has_org_admin_access.assert_called_once()
 
 
 def test_superuser_allowed():

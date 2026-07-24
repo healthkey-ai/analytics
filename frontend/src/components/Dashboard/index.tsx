@@ -79,7 +79,11 @@ function EligibilityCard({ data, onExport }: { data: NonNullable<MetricsResponse
 }
 
 export default function Dashboard({ metrics, loading, disease, user, onLogout, activeSavedCohortId, filters }: Props) {
-  const canExport = user.is_premium === true || user.is_staff === true || user.role === 'admin'
+  const canExport =
+    user.is_premium === true ||
+    user.is_staff === true ||
+    user.role === 'admin' ||
+    user.is_org_admin === true
   const isMultipleMyeloma = disease === 'Multiple Myeloma'
   const isFollicularLymphoma = disease === 'Follicular Lymphoma'
   const [tab, setTab]                 = useState<DashboardTab>('outcomes')
