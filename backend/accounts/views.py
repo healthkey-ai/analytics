@@ -140,5 +140,5 @@ def _user_data(user):
         "name":       user.name,
         "is_staff":   user.is_staff,
         "is_premium": is_premium,
-        "role":       "admin" if getattr(user, "is_superuser", False) else "staff" if user.is_staff else "user",
+        "role":       "admin" if user.is_superuser else "staff" if user.is_staff else "user",
     }

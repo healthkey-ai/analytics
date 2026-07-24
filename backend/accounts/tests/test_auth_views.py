@@ -126,6 +126,24 @@ class TestMeView:
         assert "uid" in resp.data
         assert "is_staff" in resp.data
 
+    def test_role_user(self, api_client, make_user):
+        user = make_user(is_staff=False, is_superuser=False)
+        api_client.force_authenticate(user=user)
+        resp = api_client.get(ME_URL)
+        assert resp.data["role"] == "user"
+
+    def test_role_staff(self, api_client, make_user):
+        user = make_user(is_staff=True, is_superuser=False)
+        api_client.force_authenticate(user=user)
+        resp = api_client.get(ME_URL)
+        assert resp.data["role"] == "staff"
+
+    def test_role_admin(self, api_client, make_user):
+        user = make_user(is_staff=True, is_superuser=True)
+        api_client.force_authenticate(user=user)
+        resp = api_client.get(ME_URL)
+        assert resp.data["role"] == "admin"
+
     def test_unauthenticated_returns_403(self, api_client):
         resp = api_client.get(ME_URL)
         assert resp.status_code == 403

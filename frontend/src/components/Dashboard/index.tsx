@@ -76,7 +76,7 @@ function EligibilityCard({ data }: { data: NonNullable<MetricsResponse['eligibil
 }
 
 export default function Dashboard({ metrics, loading, disease, user, onLogout, activeSavedCohortId }: Props) {
-  const canExport = user.is_staff === true || user.role === 'staff' || user.role === 'admin'
+  const canExport = user.is_premium === true || user.is_staff === true || user.role === 'admin'
   const isMultipleMyeloma = disease === 'Multiple Myeloma'
   const isFollicularLymphoma = disease === 'Follicular Lymphoma'
   const [tab, setTab]                 = useState<DashboardTab>('outcomes')
@@ -214,7 +214,7 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
             ) : (
               <button
                 disabled
-                title="Premium subscription required"
+                title="Premium or staff access required"
                 className="flex items-center gap-1.5 text-sm text-gray-400 border border-gray-200 rounded-lg px-3 py-1.5 cursor-not-allowed opacity-60"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

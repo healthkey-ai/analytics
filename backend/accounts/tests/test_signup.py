@@ -23,6 +23,7 @@ def _mock_user(email='test@example.com'):
     mock_user.email = email
     mock_user.name = 'Test User'
     mock_user.is_staff = False
+    mock_user.is_superuser = False
     mock_user.is_premium = False
     return mock_user
 
