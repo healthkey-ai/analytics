@@ -1,5 +1,6 @@
 """Shared utilities for organisation-scoped querysets."""
 import logging
+from django.db import OperationalError, ProgrammingError
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework.response import Response
@@ -114,54 +115,63 @@ def get_admin_org_names(user) -> list[str]:
     """
     from .promop_models import PromopGroupAccess, PromopOrganization, PromopOrgTrust
 
-    if getattr(user, "is_staff", False):
-        return sorted(
-            PromopOrganization.objects.filter(is_active=True).values_list("name", flat=True)
+    user_id = getattr(user, "pk", None)
+    if not isinstance(user_id, int):
+        user_id = getattr(user, "id", None)
+    if not isinstance(user_id, int):
+        return []
+
+    try:
+        if getattr(user, "is_staff", False):
+            return sorted(
+                PromopOrganization.objects.filter(is_active=True).values_list("name", flat=True)
+            )
+
+        now = timezone.now()
+        email = getattr(user, "email", "") or ""
+        access_identity_filter = Q(identity_id=user_id)
+        if email:
+            access_identity_filter |= Q(identity__email__iexact=email)
+
+        active_access = PromopGroupAccess.objects.filter(
+            access_identity_filter,
+        ).filter(
+            Q(expires_at__isnull=True) | Q(expires_at__gt=now)
         )
 
-    now = timezone.now()
-    email = getattr(user, "email", "") or ""
-    access_identity_filter = Q(identity=user)
-    if email:
-        access_identity_filter |= Q(identity__email__iexact=email)
+        admin_names = set(
+            active_access.filter(role="org_admin", org__isnull=False, org__is_active=True)
+            .values_list("org__name", flat=True)
+        )
+        direct_names = set(
+            active_access.filter(org__isnull=False, org__is_active=True)
+            .values_list("org__name", flat=True)
+        )
+        group_org_names = set(
+            active_access.filter(group__isnull=False, group__organization__is_active=True)
+            .values_list("group__organization__name", flat=True)
+        )
+        direct_names |= group_org_names
 
-    active_access = PromopGroupAccess.objects.filter(
-        access_identity_filter,
-    ).filter(
-        Q(expires_at__isnull=True) | Q(expires_at__gt=now)
-    )
+        trusted_by_org = set(
+            PromopOrgTrust.objects.filter(
+                trusted_org__name__in=sorted(name for name in direct_names if name),
+                trusted_org__is_active=True,
+                granting_org__is_active=True,
+            ).values_list("granting_org__name", flat=True)
+        ) if direct_names else set()
 
-    admin_names = set(
-        active_access.filter(role="org_admin", org__isnull=False, org__is_active=True)
-        .values_list("org__name", flat=True)
-    )
-    direct_names = set(
-        active_access.filter(org__isnull=False, org__is_active=True)
-        .values_list("org__name", flat=True)
-    )
-    group_org_names = set(
-        active_access.filter(group__isnull=False, group__organization__is_active=True)
-        .values_list("group__organization__name", flat=True)
-    )
-    direct_names |= group_org_names
+        user_domain = email.split("@")[1].lower() if "@" in email else ""
+        trusted_by_domain = set(
+            PromopOrgTrust.objects.filter(
+                trusted_domain__iexact=user_domain,
+                granting_org__is_active=True,
+            ).values_list("granting_org__name", flat=True)
+        ) if user_domain else set()
 
-    trusted_by_org = set(
-        PromopOrgTrust.objects.filter(
-            trusted_org__name__in=sorted(name for name in direct_names if name),
-            trusted_org__is_active=True,
-            granting_org__is_active=True,
-        ).values_list("granting_org__name", flat=True)
-    ) if direct_names else set()
-
-    user_domain = email.split("@")[1].lower() if "@" in email else ""
-    trusted_by_domain = set(
-        PromopOrgTrust.objects.filter(
-            trusted_domain__iexact=user_domain,
-            granting_org__is_active=True,
-        ).values_list("granting_org__name", flat=True)
-    ) if user_domain else set()
-
-    return sorted(admin_names | trusted_by_org | trusted_by_domain)
+        return sorted(admin_names | trusted_by_org | trusted_by_domain)
+    except (ProgrammingError, OperationalError):
+        return []
 
 
 def has_org_admin_access(user) -> bool:
