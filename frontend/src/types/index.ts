@@ -4,6 +4,7 @@ export interface User {
   name: string
   is_staff: boolean
   is_premium: boolean
+  is_org_admin: boolean
   role: 'user' | 'staff' | 'admin'
 }
 

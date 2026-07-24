@@ -144,6 +144,14 @@ class TestMeView:
         resp = api_client.get(ME_URL)
         assert resp.data["role"] == "admin"
 
+    def test_authenticated_includes_org_admin_flag(self, api_client, make_user, monkeypatch):
+        user = make_user(email="me@example.com", name="Me User")
+        api_client.force_authenticate(user=user)
+        monkeypatch.setattr("accounts.views.has_org_admin_access", lambda user: True)
+        resp = api_client.get(ME_URL)
+        assert resp.status_code == 200
+        assert resp.data["is_org_admin"] is True
+
     def test_unauthenticated_returns_403(self, api_client):
         resp = api_client.get(ME_URL)
         assert resp.status_code == 403

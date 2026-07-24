@@ -237,6 +237,18 @@ class TestSavedCohortExport:
         resp = api_client.get(export_url(cohort.pk, "csv"))
         assert resp.status_code == 403
 
+    def test_export_org_admin_user_allowed(self, api_client, make_user, cohort, monkeypatch):
+        user = make_user(email="org-admin@example.com", is_premium=False)
+        cohort.user = user
+        cohort.save(update_fields=["user"])
+        api_client.force_authenticate(user=user)
+        mock_qs = _mock_export_qs(self._SAMPLE_ROWS)
+        monkeypatch.setattr("accounts.permissions.has_org_admin_access", lambda user: True)
+        with patch("cohorts.saved_views.apply_cohort_filters", return_value=mock_qs), \
+             _mock_export_scope(mock_qs):
+            resp = api_client.get(export_url(cohort.pk, "csv"))
+        assert resp.status_code == 200
+
 
 # ── Filter cardinality ────────────────────────────────────────────────────────
 
