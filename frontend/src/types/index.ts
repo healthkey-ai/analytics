@@ -4,7 +4,7 @@ export interface User {
   name: string
   is_staff: boolean
   is_premium: boolean
-  role: 'user' | 'staff'
+  role: 'user' | 'staff' | 'admin'
 }
 
 export interface SavedCohort {
