@@ -129,7 +129,7 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
       p.set('file_format', format)
       try {
         if (format === 'csv') {
-          const resp = await api.get(`/metrics/export/?${p.toString()}`, { responseType: 'blob' })
+          const resp = await api.get(`/export/?${p.toString()}`, { responseType: 'blob' })
           const url = URL.createObjectURL(new Blob([resp.data]))
           const a = document.createElement('a')
           a.href = url
@@ -137,7 +137,7 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
           a.click()
           URL.revokeObjectURL(url)
         } else {
-          const resp = await api.get(`/metrics/export/?${p.toString()}`, { responseType: 'blob' })
+          const resp = await api.get(`/export/?${p.toString()}`, { responseType: 'blob' })
           const url = URL.createObjectURL(new Blob([resp.data], { type: 'application/json' }))
           const a = document.createElement('a')
           a.href = url
