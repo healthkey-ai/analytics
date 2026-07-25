@@ -1,5 +1,7 @@
 """
 Tests for GET /api/export/?chart=<key>&file_format=csv|json
+
+JSON is supported via direct API access but is not offered in the UI.
 """
 import json
 from unittest.mock import MagicMock, patch
@@ -139,6 +141,7 @@ class TestChartExportValidation:
 class TestChartExportCSV:
     _SAMPLE_ROWS = [
         {
+            "id": "pat-001",
             "patient_age": 65,
             "gender": "M",
             "race": "White",
@@ -147,6 +150,7 @@ class TestChartExportCSV:
             "region": "Southeast",
             "smoking_status": "Never",
             "disease": "Multiple Myeloma",
+            "diagnosis_date": "2020-01-15",
         }
     ]
 
@@ -205,6 +209,7 @@ class TestChartExportCSV:
 class TestChartExportJSON:
     _SAMPLE_ROWS = [
         {
+            "id": "pat-002",
             "patient_age": 72,
             "gender": "F",
             "race": "Asian",
@@ -213,6 +218,7 @@ class TestChartExportJSON:
             "region": "West",
             "smoking_status": "Former",
             "disease": "Follicular Lymphoma",
+            "diagnosis_date": "2019-06-01",
         }
     ]
 

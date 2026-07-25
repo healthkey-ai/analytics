@@ -1,7 +1,7 @@
 """
 Chart-level patient export endpoint.
 
-GET /metrics/export/?chart=<key>&file_format=csv
+GET /metrics/export/?chart=<key>&file_format=csv|json
 
 Returns patient-level data (one row per patient) with columns relevant to
 the requested chart.  Access is restricted to premium or staff users and

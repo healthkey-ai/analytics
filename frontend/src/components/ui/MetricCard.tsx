@@ -1,6 +1,3 @@
-import { useState, useRef } from 'react'
-import { useOutsideClick } from '../../hooks/useOutsideClick'
-
 interface Props {
   title: string
   children: React.ReactNode
@@ -10,10 +7,6 @@ interface Props {
 }
 
 export default function MetricCard({ title, children, className = '', description, onExport }: Props) {
-  const [showExportMenu, setShowExportMenu] = useState(false)
-  const exportMenuRef = useRef<HTMLDivElement>(null)
-  useOutsideClick(exportMenuRef, () => setShowExportMenu(false), showExportMenu)
-
   return (
     <div className={`bg-white rounded-xl border border-gray-200 shadow-sm p-5 ${className}`}>
       <div className="flex items-center gap-1.5 mb-4">
@@ -36,7 +29,7 @@ export default function MetricCard({ title, children, className = '', descriptio
         {onExport && (
           <button
             type="button"
-            onClick={() => { setShowExportMenu(false); onExport() }}
+            onClick={onExport}
             className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
             aria-label="Export chart data as CSV"
             title="Export chart data as CSV"
