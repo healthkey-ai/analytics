@@ -162,8 +162,9 @@ class TestChartExportCSV:
         content = b"".join(resp.streaming_content).decode()
         first_line = content.splitlines()[0]
 
-        # All demographics fields should appear in the header row
-        for col in ("patient_age", "gender", "race", "ethnicity", "country", "region", "smoking_status", "disease"):
+        # All demographics fields should appear in the header row (id must be first)
+        assert first_line.startswith("id,"), f"Expected 'id' as first column, got: {first_line}"
+        for col in ("id", "patient_age", "gender", "race", "ethnicity", "country", "region", "smoking_status", "disease", "diagnosis_date"):
             assert col in first_line, f"Expected column '{col}' in header: {first_line}"
 
     def test_csv_has_content_disposition_attachment(self, api_client, staff_user):

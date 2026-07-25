@@ -66,7 +66,7 @@ function NoDataPlaceholder() {
   )
 }
 
-function EligibilityCard({ data, onExport }: { data: NonNullable<MetricsResponse['eligibility']>; onExport?: (format: 'csv' | 'json') => void }) {
+function EligibilityCard({ data, onExport }: { data: NonNullable<MetricsResponse['eligibility']>; onExport?: () => void }) {
   return (
     <MetricCard
       title="Eligibility / Feasibility Counts"
@@ -126,36 +126,26 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
     return p
   }
 
-  function chartExportHandler(chartKey: string): (format: 'csv' | 'json') => void {
-    return async (format: 'csv' | 'json') => {
+  function chartExportHandler(chartKey: string): () => void {
+    return async () => {
       const p = toFilterParams()
       p.set('chart', chartKey)
-      p.set('file_format', format)
+      p.set('file_format', 'csv')
       try {
-        if (format === 'csv') {
-          const resp = await api.get(`/export/?${p.toString()}`, { responseType: 'blob' })
-          const url = URL.createObjectURL(new Blob([resp.data]))
-          const a = document.createElement('a')
-          a.href = url
-          a.download = `${chartKey}_export.csv`
-          a.click()
-          URL.revokeObjectURL(url)
-        } else {
-          const resp = await api.get(`/export/?${p.toString()}`, { responseType: 'blob' })
-          const url = URL.createObjectURL(new Blob([resp.data], { type: 'application/json' }))
-          const a = document.createElement('a')
-          a.href = url
-          a.download = `${chartKey}_export.json`
-          a.click()
-          URL.revokeObjectURL(url)
-        }
+        const resp = await api.get(`/export/?${p.toString()}`, { responseType: 'blob' })
+        const url = URL.createObjectURL(new Blob([resp.data]))
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${chartKey}_export.csv`
+        a.click()
+        URL.revokeObjectURL(url)
       } catch {
         alert('Export failed. Please try again.')
       }
     }
   }
 
-  async function handleExport(format: 'csv' | 'json') {
+  async function handleExport() {
     setShowExportMenu(false)
     if (!activeSavedCohortId) {
       alert('Save your current cohort first (use the "Save" button in the left panel), then export.')
@@ -163,7 +153,7 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
     }
     try {
       const resp = await api.get(
-        `/cohorts/saved/${activeSavedCohortId}/export/?file_format=${format}`,
+        `/cohorts/saved/${activeSavedCohortId}/export/?file_format=csv`,
         { responseType: 'blob' }
       )
       const url = URL.createObjectURL(new Blob([resp.data]))
@@ -171,7 +161,7 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
       const disposition = resp.headers['content-disposition'] ?? ''
       const match = disposition.match(/filename="([^"]+)"/)
       a.href = url
-      a.download = match ? match[1] : `cohort.${format}`
+      a.download = match ? match[1] : 'cohort.csv'
       a.click()
       URL.revokeObjectURL(url)
     } catch {
@@ -244,8 +234,7 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
                 </button>
                 {showExportMenu && (
                   <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-[120px]">
-                    <button onClick={() => handleExport('csv')} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">CSV</button>
-                    <button onClick={() => handleExport('json')} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">JSON</button>
+                    <button onClick={() => handleExport()} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">CSV</button>
                   </div>
                 )}
               </>

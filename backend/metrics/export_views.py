@@ -1,7 +1,7 @@
 """
 Chart-level patient export endpoint.
 
-GET /metrics/export/?chart=<key>&file_format=csv|json
+GET /metrics/export/?chart=<key>&file_format=csv
 
 Returns patient-level data (one row per patient) with columns relevant to
 the requested chart.  Access is restricted to premium or staff users and
@@ -37,26 +37,28 @@ class ChartExportRateThrottle(UserRateThrottle):
 
 CHART_EXPORT_FIELDS = {
     "survival": [
-        "patient_age", "gender", "disease", "stage",
+        "id", "patient_age", "gender", "disease", "stage",
         "diagnosis_date",
         "first_line_therapy", "first_line_start_date", "first_line_end_date",
         "first_line_outcome",
     ],
     "subgroup_survival": [
-        "patient_age", "gender", "disease", "stage",
+        "id", "patient_age", "gender", "disease", "stage",
         "diagnosis_date",
         "cytogenic_markers", "stem_cell_transplant_history",
         "first_line_therapy", "first_line_start_date", "first_line_end_date",
         "first_line_outcome",
     ],
     "response_rates": [
-        "patient_age", "gender", "disease", "stage",
+        "id", "patient_age", "gender", "disease", "stage",
+        "diagnosis_date",
         "first_line_therapy", "first_line_outcome",
         "second_line_therapy", "second_line_outcome",
         "later_therapy", "later_outcome",
     ],
     "treatment_patterns": [
-        "patient_age", "gender", "disease",
+        "id", "patient_age", "gender", "disease",
+        "diagnosis_date",
         "therapy_lines_count", "relapse_count",
         "first_line_therapy", "first_line_start_date", "first_line_end_date",
         "first_line_outcome",
@@ -66,17 +68,21 @@ CHART_EXPORT_FIELDS = {
         "later_outcome", "later_therapies",
     ],
     "demographics": [
-        "patient_age", "gender", "race", "ethnicity",
+        "id", "patient_age", "gender", "race", "ethnicity",
         "country", "region", "smoking_status", "disease",
+        "diagnosis_date",
     ],
     "staging": [
-        "disease", "stage", "ecog_performance_status",
+        "id", "patient_age", "gender", "disease", "stage",
+        "diagnosis_date",
+        "ecog_performance_status",
         "cytogenic_markers", "stem_cell_transplant_history",
         "clonal_plasma_cells", "meets_crab",
         "bone_lesions", "bone_imaging_result", "plasma_cell_leukemia",
     ],
     "labs": [
-        "patient_age", "gender", "disease",
+        "id", "patient_age", "gender", "disease",
+        "diagnosis_date",
         "hemoglobin_g_dl", "platelet_count",
         "wbc_count_thousand_per_ul", "anc_thousand_per_ul",
         "serum_creatinine_mg_dl", "egfr_ml_min_173m2",
@@ -86,79 +92,86 @@ CHART_EXPORT_FIELDS = {
         "monoclonal_protein_serum", "monoclonal_protein_urine",
     ],
     "ttnt": [
-        "patient_age", "gender", "disease",
+        "id", "patient_age", "gender", "disease",
+        "diagnosis_date",
         "first_line_therapy", "first_line_start_date", "first_line_end_date",
         "second_line_therapy", "second_line_start_date", "second_line_end_date",
         "later_therapy", "later_start_date", "later_end_date",
     ],
     "dor": [
-        "patient_age", "gender", "disease",
+        "id", "patient_age", "gender", "disease",
+        "diagnosis_date",
         "first_line_therapy", "first_line_outcome",
         "first_line_start_date", "first_line_end_date",
         "second_line_therapy", "second_line_outcome",
         "second_line_start_date", "second_line_end_date",
     ],
     "treatment_duration": [
-        "patient_age", "gender", "disease",
+        "id", "patient_age", "gender", "disease",
+        "diagnosis_date",
         "first_line_therapy", "first_line_start_date", "first_line_end_date",
         "second_line_therapy", "second_line_start_date", "second_line_end_date",
         "later_therapy", "later_start_date", "later_end_date",
     ],
     "switching": [
-        "patient_age", "gender", "disease",
+        "id", "patient_age", "gender", "disease",
+        "diagnosis_date",
         "therapy_lines_count",
         "first_line_therapy", "second_line_therapy",
         "later_therapy", "later_therapies",
     ],
     "pathway_sunburst": [
-        "patient_age", "gender", "disease",
+        "id", "patient_age", "gender", "disease",
+        "diagnosis_date",
         "therapy_lines_count",
         "first_line_therapy", "second_line_therapy",
         "later_therapy", "later_therapies",
     ],
     "incidence": [
-        "patient_age", "gender", "disease",
+        "id", "patient_age", "gender", "disease",
         "diagnosis_date", "first_line_start_date",
     ],
     "time_to_treatment": [
-        "patient_age", "gender", "disease",
+        "id", "patient_age", "gender", "disease",
         "diagnosis_date", "first_line_start_date",
     ],
     "disease_state": [
-        "patient_age", "gender", "disease",
+        "id", "patient_age", "gender", "disease",
         "diagnosis_date", "therapy_lines_count", "relapse_count",
         "first_line_start_date", "condition_clinical_status",
     ],
-    # All EXPORT_FIELDS for eligibility / cohort_characterization
+    # All EXPORT_FIELDS for eligibility / cohort_characterization (already includes id)
     "eligibility": list(EXPORT_FIELDS),
     "cohort_characterization": list(EXPORT_FIELDS),
     "pod24": [
-        "patient_age", "gender", "disease",
+        "id", "patient_age", "gender", "disease",
         "diagnosis_date",
         "first_line_start_date", "first_line_end_date", "first_line_outcome",
     ],
     "landmark_response": [
-        "patient_age", "gender", "disease",
+        "id", "patient_age", "gender", "disease",
         "diagnosis_date",
         "first_line_start_date", "first_line_end_date", "first_line_outcome",
     ],
     "pathway_outcomes": [
-        "patient_age", "gender", "disease",
+        "id", "patient_age", "gender", "disease",
+        "diagnosis_date",
         "first_line_therapy", "first_line_start_date", "first_line_outcome",
         "second_line_therapy", "second_line_start_date", "second_line_outcome",
     ],
     "transformation": [
-        "patient_age", "gender", "disease",
+        "id", "patient_age", "gender", "disease",
         "diagnosis_date", "condition_clinical_status",
         "first_line_therapy", "first_line_start_date", "first_line_outcome",
     ],
     "forest_plot": [
-        "patient_age", "gender", "disease", "stage",
+        "id", "patient_age", "gender", "disease", "stage",
+        "diagnosis_date",
         "cytogenic_markers", "stem_cell_transplant_history",
         "first_line_therapy", "first_line_outcome",
     ],
     "landmark_survival": [
-        "patient_age", "gender", "disease", "stage",
+        "id", "patient_age", "gender", "disease", "stage",
         "diagnosis_date",
         "first_line_therapy", "first_line_start_date", "first_line_end_date",
         "first_line_outcome",
