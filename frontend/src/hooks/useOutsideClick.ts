@@ -1,4 +1,5 @@
-import { useEffect, RefObject } from 'react'
+import { useEffect } from 'react'
+import type { RefObject } from 'react'
 
 /**
  * Calls `handler` when a mousedown event fires outside of `ref`.
