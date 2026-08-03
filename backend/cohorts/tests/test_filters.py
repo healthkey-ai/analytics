@@ -104,13 +104,14 @@ def _run_filters(params: dict, **kwargs) -> _FakeQS:
 # ── org filter ────────────────────────────────────────────────────────────────
 
 def test_org_filter_applied():
-    result = _run_filters({"org": "Mayo Clinic"})
-    assert result._filters.get("organization__name__iexact") == "Mayo Clinic"
+    with patch("cohorts.filters.resolve_org_filter_names", return_value=["Mayo Clinic"]):
+        result = _run_filters({"org": "Mayo Clinic"})
+    assert result._filters.get("organization__name__in") == ["Mayo Clinic"]
 
 
 def test_org_filter_not_applied_when_absent():
     result = _run_filters({})
-    assert "organization__name__iexact" not in result._filters
+    assert "organization__name__in" not in result._filters
 
 
 # ── demographic filters ──────────────────────────────────────────────────────

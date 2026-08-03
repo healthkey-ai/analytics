@@ -5,6 +5,7 @@ from django.utils import timezone
 from cohorts.stage_utils import expand_stage_filter_values
 from patients.models import PatientInfo
 from metrics.services.clinical_filters import HIGH_RISK_CYTO, HAS_SCT, NO_SCT
+from accounts.utils import resolve_org_filter_names
 
 
 def apply_cohort_filters(request, include_transformed=False, qs=None, funnel=None) -> "QuerySet[PatientInfo]":
@@ -128,9 +129,11 @@ def apply_cohort_filters(request, include_transformed=False, qs=None, funnel=Non
     # Note: this filter is meaningful only for staff (and future trusted-org) users.
     # For regular users, apply_org_scope (called in the view layer) enforces row-level
     # org isolation via an exact-match filter regardless of what org= is passed here.
+    # resolve_org_filter_names expands trust-umbrella orgs (e.g. HealthTree Trust) to
+    # include the member orgs whose patients actually live in the DB.
     org = p.get("org")
     if org:
-        qs = qs.filter(organization__name__iexact=org)
+        qs = qs.filter(organization__name__in=resolve_org_filter_names(org))
         applied = True
 
     _step("geography", "Geography", applied)

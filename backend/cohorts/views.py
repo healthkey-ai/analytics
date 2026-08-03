@@ -194,9 +194,14 @@ def form_settings(request):
         return canonical.get(name.strip().lower(), name)
 
     # Pull distinct values actually present in the DB for this disease (scoped to org)
+    # resolve_org_filter_names expands trust-umbrella orgs (e.g. HealthTree Trust)
+    # to include the member orgs whose patients actually live in the DB.
+    if org:
+        from accounts.utils import resolve_org_filter_names
+        org_filter_names = resolve_org_filter_names(org)
     qs = PatientInfo.objects.filter(disease__icontains=disease)
     if org:
-        qs = qs.filter(organization__name__iexact=org)
+        qs = qs.filter(organization__name__in=org_filter_names)
     regions = sorted(
         qs.exclude(region__isnull=True).values_list("region", flat=True).distinct()
     )
@@ -217,7 +222,7 @@ def form_settings(request):
     # Compute patient counts per normalized disease name (scoped to org if provided)
     base_qs = PatientInfo.objects.exclude(disease__isnull=True)
     if org:
-        base_qs = base_qs.filter(organization__name__iexact=org)
+        base_qs = base_qs.filter(organization__name__in=org_filter_names)
 
     disease_counts: dict[str, int] = {}
     for row in base_qs.values("disease").annotate(cnt=Count("id")):

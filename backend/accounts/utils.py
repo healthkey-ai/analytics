@@ -23,6 +23,29 @@ def _promop_access_tables_available() -> bool:
     return required_tables.issubset(existing_tables)
 
 
+def resolve_org_filter_names(org_name: str) -> list[str]:
+    """
+    Expand an org name used as a patient filter to include all orgs whose
+    patients should be visible under that selection.
+
+    Trust-umbrella orgs (e.g. 'HealthTree Trust') have no patients of their
+    own; instead, member orgs (e.g. SYNTHEA-MM, SYNTHEA-BC) grant access to
+    them via OrgTrust rows (granting_org=SYNTHEA-XX, trusted_org=HealthTree Trust).
+    When such an umbrella is selected, we include those member orgs so the
+    disease dropdown and metrics queries return their patients.
+    """
+    if not _promop_access_tables_available():
+        return [org_name]
+    from .promop_models import PromopOrgTrust
+    member_names = list(
+        PromopOrgTrust.objects.filter(
+            trusted_org__name__iexact=org_name,
+            granting_org__is_active=True,
+        ).values_list("granting_org__name", flat=True)
+    )
+    return [org_name] + member_names
+
+
 def get_visible_org_names(user) -> list[str]:
     """
     Return the sorted list of org names this user may see aggregate data for.
