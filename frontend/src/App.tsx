@@ -2,13 +2,19 @@ import { useState } from 'react'
 import CohortPanel from './components/CohortPanel'
 import Dashboard from './components/Dashboard'
 import LoginPage from './components/Auth/LoginPage'
+import ResetPasswordPage from './components/Auth/ResetPasswordPage'
 import { useAnalytics } from './hooks/useAnalytics'
 import { useAuth } from './hooks/useAuth'
 import type { AuthState } from './hooks/useAuth'
 import type { CohortFilters } from './types'
 
+function getResetToken(): string | null {
+  return new URLSearchParams(window.location.search).get('token')
+}
+
 export default function App() {
   const auth = useAuth()
+  const resetToken = getResetToken()
 
   if (auth.loading) {
     return (
@@ -16,6 +22,10 @@ export default function App() {
         <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
       </div>
     )
+  }
+
+  if (resetToken && !auth.user) {
+    return <ResetPasswordPage token={resetToken} onSuccess={auth.setUser} />
   }
 
   if (!auth.user) {
