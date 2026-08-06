@@ -17,6 +17,12 @@ services:
       - key: EMAIL_HOST_PASSWORD
         sync: false          # SendGrid API key
 
+      - key: MAILGUN_API_KEY
+        sync: false
+
+      - key: MAILGUN_SENDER_DOMAIN
+        value: "mg.phrame.org"
+
       # ── Static values ────────────────────────────────────────────────────────
       - key: DEBUG
         value: "false"
