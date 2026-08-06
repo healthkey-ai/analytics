@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.password_validation import validate_password
@@ -11,6 +13,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework import status
+
+logger = logging.getLogger(__name__)
 
 from .models import Identity, Organization, PasswordResetToken
 from .utils import has_org_admin_access
@@ -152,18 +156,20 @@ def password_reset_request_view(request):
 
     token_obj = PasswordResetToken.objects.create(identity=identity)
     reset_url = f"{settings.FRONTEND_URL}?token={token_obj.token}"
-    send_mail(
-        subject="Reset your PRism password",
-        message=(
-            f"Hi {identity.name or identity.email},\n\n"
-            f"Click the link below to reset your password. This link expires in 1 hour.\n\n"
-            f"{reset_url}\n\n"
-            f"If you did not request a password reset, you can ignore this email.\n"
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[identity.email],
-        fail_silently=True,
-    )
+    try:
+        send_mail(
+            subject="Reset your PRism password",
+            message=(
+                f"Hi {identity.name or identity.email},\n\n"
+                f"Click the link below to reset your password. This link expires in 1 hour.\n\n"
+                f"{reset_url}\n\n"
+                f"If you did not request a password reset, you can ignore this email.\n"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[identity.email],
+        )
+    except Exception:
+        logger.exception("Failed to send password reset email to %s", identity.email[:3] + "***")
     return Response({"detail": "If that email is registered you will receive a reset link shortly."})
 
 
