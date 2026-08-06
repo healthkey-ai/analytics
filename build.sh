@@ -6,6 +6,7 @@ npm install
 npm run build
 
 cd ../backend
+pip cache purge || true
 pip install --no-cache-dir --upgrade -r requirements.txt
 python manage.py migrate --noinput
 python manage.py sync_organizations
