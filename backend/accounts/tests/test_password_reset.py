@@ -1,5 +1,6 @@
 """Tests for the password-reset email-link flow."""
 import pytest
+from unittest.mock import patch
 from django.contrib.auth.tokens import default_token_generator
 from django.test import override_settings
 from django.utils.encoding import force_bytes
@@ -7,6 +8,7 @@ from django.utils.http import urlsafe_base64_encode
 from rest_framework.test import APIClient
 
 from accounts.models import Identity
+from accounts.password_reset import _EmailError
 
 
 @pytest.fixture
@@ -61,7 +63,7 @@ def test_request_reset_sends_email(client, local_user):
     client.post("/api/auth/password-reset/", {"email": local_user.email}, format="json")
     assert len(mail.outbox) == 1
     assert local_user.email in mail.outbox[0].to
-    assert "reset-password" in mail.outbox[0].body
+    assert "uid=" in mail.outbox[0].body
 
 
 # ---------------------------------------------------------------------------
@@ -143,3 +145,58 @@ def test_reset_password_token_invalidated_after_use(client, local_user):
 def test_reset_password_missing_fields(client, local_user):
     resp = client.post("/api/auth/password-reset-confirm/", {}, format="json")
     assert resp.status_code == 400
+
+
+@pytest.mark.django_db
+def test_reset_password_inactive_account_rejected(client, local_user):
+    local_user.is_active = False
+    local_user.save(update_fields=["is_active"])
+    uid, token = _make_link_params(local_user)
+    resp = client.post(
+        "/api/auth/password-reset-confirm/",
+        {"uid": uid, "token": token, "new_password": "NewValidPass456!"},
+        format="json",
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.django_db
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+                   APP_BASE_URL="http://localhost:5173")
+def test_request_reset_ignores_sso_account(client, db):
+    """SSO accounts (non-local issuer) should not receive reset emails."""
+    from django.core import mail
+    Identity.objects.create(
+        email="sso@example.com",
+        issuer="urn:google",
+        sub="google-sub-123",
+        uid="urn:google:google-sub-123",
+    )
+    resp = client.post("/api/auth/password-reset/", {"email": "sso@example.com"}, format="json")
+    assert resp.status_code == 200
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+                   APP_BASE_URL="http://localhost:5173")
+def test_email_failure_still_returns_200(client, local_user):
+    """Email delivery failure must not reveal that the account exists."""
+    with patch("accounts.password_reset._send_reset_email", side_effect=_EmailError):
+        resp = client.post(
+            "/api/auth/password-reset/", {"email": local_user.email}, format="json"
+        )
+    assert resp.status_code == 200
+
+
+@pytest.mark.django_db
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+                   APP_BASE_URL="http://testserver")
+def test_reset_link_uses_app_base_url(client, local_user):
+    """The link in the email must use APP_BASE_URL (the frontend URL)."""
+    from django.core import mail
+    client.post("/api/auth/password-reset/", {"email": local_user.email}, format="json")
+    assert len(mail.outbox) == 1
+    assert "http://testserver/?" in mail.outbox[0].body
+    assert "uid=" in mail.outbox[0].body
+    assert "token=" in mail.outbox[0].body

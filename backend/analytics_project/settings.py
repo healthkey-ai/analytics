@@ -111,10 +111,18 @@ if os.environ.get("MAILGUN_SENDER_DOMAIN"):
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "HealthKey Analytics <noreply@healthkey.ai>")
 
 # Base URL used when building password-reset links in emails.
-APP_BASE_URL = os.environ.get(
-    "APP_BASE_URL",
-    os.environ.get("RENDER_EXTERNAL_URL", "http://localhost:5173"),
-).rstrip("/")
+# Must be the *frontend* URL (e.g. https://analytics.healthkey.ai), NOT the
+# backend API URL. RENDER_EXTERNAL_URL is the backend service URL on Render and
+# is NOT a safe fallback — set APP_BASE_URL explicitly in production.
+APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://localhost:5173").rstrip("/")
+if not DEBUG and not os.environ.get("APP_BASE_URL"):
+    raise ImproperlyConfigured(
+        "APP_BASE_URL must be set in production to the frontend origin "
+        "(e.g. https://analytics.healthkey.ai)."
+    )
+
+# Token lifetime for password-reset links — must match the email body copy.
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 24  # 24 hours
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
@@ -133,7 +141,12 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.AnonRateThrottle"],
-    "DEFAULT_THROTTLE_RATES": {"anon": "20/min", "cohort_export": "10/hour"},
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "20/min",
+        "cohort_export": "10/hour",
+        "password_reset_request": "5/hour",
+        "password_reset_confirm": "10/hour",
+    },
 }
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG

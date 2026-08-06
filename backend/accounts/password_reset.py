@@ -25,15 +25,29 @@ from .models import Identity
 
 logger = logging.getLogger(__name__)
 
+# Same message for all outcomes — prevents account enumeration.
+_RESET_OK = {"detail": "If an account exists with that email, a reset link has been sent."}
+
 
 class _EmailError(Exception):
     pass
 
 
+# Dedicated throttle scopes so reset endpoints don't share the login/signup bucket.
+class _ResetRequestThrottle(AnonRateThrottle):
+    scope = "password_reset_request"
+
+
+class _ResetConfirmThrottle(AnonRateThrottle):
+    scope = "password_reset_confirm"
+
+
 def _make_reset_link(identity) -> str:
     uidb64 = urlsafe_base64_encode(force_bytes(identity.pk))
     token = default_token_generator.make_token(identity)
-    return f"{settings.APP_BASE_URL}/reset-password?uid={uidb64}&token={token}"
+    # Use root URL with query params so WhiteNoise (WHITENOISE_INDEX_FILE=True)
+    # serves index.html correctly — avoids SPA routing 404 for /reset-password path.
+    return f"{settings.APP_BASE_URL}/?uid={uidb64}&token={token}"
 
 
 def _send_reset_email(identity) -> None:
@@ -49,12 +63,10 @@ def _send_reset_email(identity) -> None:
         "your password will not change.\n\n"
         "— The HealthKey team"
     )
-    if settings.DEBUG:
-        logger.info("Password reset email (debug)\nTo: %s\n\n%s", identity.email, body)
     try:
         sent = send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [identity.email])
     except Exception as exc:
-        logger.exception("Failed to send password reset email to %s", identity.email)
+        logger.exception("Failed to send password reset email (identity pk=%s)", identity.pk)
         raise _EmailError from exc
     if sent != 1:
         raise _EmailError("Email backend did not confirm delivery.")
@@ -62,7 +74,7 @@ def _send_reset_email(identity) -> None:
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
-@throttle_classes([AnonRateThrottle])
+@throttle_classes([_ResetRequestThrottle])
 def request_password_reset(request):
     """Public: request a password-reset link by email.
 
@@ -73,27 +85,25 @@ def request_password_reset(request):
     if not email:
         return Response({"detail": "email is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-    _OK = {"detail": "If an account exists with that email, a reset link has been sent."}
-
     try:
         identity = Identity.objects.get(email__iexact=email, issuer="urn:local")
     except Identity.DoesNotExist:
-        return Response(_OK)
+        return Response(_RESET_OK)
 
     if not identity.has_usable_password():
-        return Response(_OK)
+        return Response(_RESET_OK)
 
     try:
         _send_reset_email(identity)
     except _EmailError:
-        pass  # Don't leak failure — return the same success response
+        pass  # Don't leak failure — same response either way
 
-    return Response(_OK)
+    return Response(_RESET_OK)
 
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
-@throttle_classes([AnonRateThrottle])
+@throttle_classes([_ResetConfirmThrottle])
 def reset_password(request):
     """Public: complete a reset via the emailed link's uid + token."""
     uidb64 = (request.data.get("uid") or "").strip()
@@ -109,7 +119,20 @@ def reset_password(request):
     try:
         pk = urlsafe_base64_decode(uidb64).decode()
         identity = Identity.objects.get(pk=pk)
-    except (ValueError, TypeError, OverflowError, Identity.DoesNotExist):
+    except (ValueError, TypeError, OverflowError, UnicodeDecodeError, Identity.DoesNotExist):
+        return Response(
+            {"detail": "Invalid or expired reset link."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Only local accounts with a usable password can reset via email link.
+    if identity.issuer != "urn:local" or not identity.has_usable_password():
+        return Response(
+            {"detail": "Invalid or expired reset link."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not identity.is_active:
         return Response(
             {"detail": "Invalid or expired reset link."},
             status=status.HTTP_400_BAD_REQUEST,

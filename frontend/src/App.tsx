@@ -12,9 +12,9 @@ function getResetParams(): { uid: string; token: string } | null {
   const p = new URLSearchParams(window.location.search)
   const uid = p.get('uid')
   const token = p.get('token')
-  if (uid && token && window.location.pathname === '/reset-password') {
-    return { uid, token }
-  }
+  // Reset links use /?uid=...&token=... (root URL) so WhiteNoise serves index.html.
+  // Both params must be present to activate the reset flow.
+  if (uid && token) return { uid, token }
   return null
 }
 
