@@ -56,6 +56,7 @@ class Identity(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_premium = models.BooleanField(default=False)
+    failed_login_count = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = IdentityManager()
