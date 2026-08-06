@@ -2,6 +2,7 @@ services:
   - type: web
     name: prism
     runtime: python
+    pythonVersion: "3.12"
     buildCommand: "./build.sh"
     startCommand: "cd backend && gunicorn analytics_project.wsgi --workers 2 --timeout 120"
     plan: starter
