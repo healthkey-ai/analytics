@@ -30,7 +30,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "rest_framework",
     "corsheaders",
-    "drf_yasg",
     "accounts",
     "patients",
     "cohorts",
