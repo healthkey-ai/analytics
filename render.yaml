@@ -22,7 +22,7 @@ services:
         sync: false
 
       - key: MAILGUN_SENDER_DOMAIN
-        value: "mg.phrame.org"
+        value: "mg.healthkey.ai"
 
       # ── Static values ────────────────────────────────────────────────────────
       - key: DEBUG
