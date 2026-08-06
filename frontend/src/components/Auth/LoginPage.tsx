@@ -1,32 +1,46 @@
 import { useState } from 'react'
 import type { AuthState } from '../../hooks/useAuth'
+import { requestPasswordReset } from '../../api/client'
 
 interface Props {
   auth: AuthState
 }
 
 export default function LoginPage({ auth }: Props) {
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
+
+  function switchMode(m: 'login' | 'signup' | 'forgot') {
+    setMode(m)
+    setError('')
+    setResetSent(false)
+    setConfirmPassword('')
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+
     if (mode === 'signup' && password !== confirmPassword) {
       setError('Passwords do not match.')
       return
     }
+
     setSubmitting(true)
     try {
       if (mode === 'login') {
         await auth.login(email, password)
-      } else {
+      } else if (mode === 'signup') {
         await auth.signup(email, password, name)
+      } else {
+        await requestPasswordReset(email)
+        setResetSent(true)
       }
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
@@ -45,98 +59,138 @@ export default function LoginPage({ auth }: Props) {
         </div>
 
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 space-y-5">
-          <div className="flex rounded-lg border border-slate-700 p-0.5 bg-slate-900/50">
-            {(['login', 'signup'] as const).map(m => (
+          {mode !== 'forgot' && (
+            <div className="flex rounded-lg border border-slate-700 p-0.5 bg-slate-900/50">
+              {(['login', 'signup'] as const).map(m => (
+                <button
+                  key={m}
+                  onClick={() => switchMode(m)}
+                  className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors ${
+                    mode === m ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {m === 'login' ? 'Sign In' : 'Sign Up'}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {mode === 'forgot' && (
+            <div className="flex items-center gap-2">
               <button
-                key={m}
-                onClick={() => { setMode(m); setError(''); setConfirmPassword('') }}
-                className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors ${
-                  mode === m ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-white'
-                }`}
+                onClick={() => switchMode('login')}
+                className="text-slate-400 hover:text-white text-sm"
+                aria-label="Back to sign in"
               >
-                {m === 'login' ? 'Sign In' : 'Sign Up'}
+                ←
               </button>
-            ))}
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'signup' && (
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="Your name"
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                placeholder="you@example.com"
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
-              />
+              <span className="text-white font-semibold text-sm">Reset Password</span>
             </div>
+          )}
 
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
-              />
-            </div>
+          {mode === 'forgot' && resetSent ? (
+            <p className="text-sm text-slate-300 leading-relaxed">
+              If that email is registered you will receive a reset link shortly. Check your inbox.
+            </p>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {mode === 'signup' && (
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="Your name"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              )}
 
-            {mode === 'signup' && (
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Confirm Password</label>
+                <label className="block text-xs text-slate-400 mb-1">Email</label>
                 <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
                   required
-                  placeholder="••••••••"
+                  placeholder="you@example.com"
                   className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
                 />
               </div>
-            )}
 
+              {mode !== 'forgot' && (
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Password</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              )}
 
-            {mode === 'signup' && (
-              <p className="text-xs text-slate-400 leading-relaxed">
-                This platform provides analytics on a set of synthetic data from fictional foundations for demonstration purposes.
-                For questions, contact{' '}
-                <a href="mailto:support@healthkey.ai" className="text-teal-400 hover:text-teal-300 underline">
-                  support@healthkey.ai
-                </a>
-                .
-              </p>
-            )}
+              {mode === 'signup' && (
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Confirm Password</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              )}
 
-            {error && (
-              <p className="text-xs text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2">
-                {error}
-              </p>
-            )}
+              {mode === 'login' && (
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => switchMode('forgot')}
+                    className="text-xs text-teal-400 hover:text-teal-300"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white font-semibold rounded-lg py-2.5 text-sm transition-colors"
-            >
-              {submitting ? 'Please wait…' : mode === 'login' ? 'Sign In' : 'Create Account'}
-            </button>
-          </form>
+              {mode === 'signup' && (
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  This platform provides analytics on a set of synthetic data from fictional foundations for demonstration purposes.
+                  For questions, contact{' '}
+                  <a href="mailto:support@healthkey.ai" className="text-teal-400 hover:text-teal-300 underline">
+                    support@healthkey.ai
+                  </a>
+                  .
+                </p>
+              )}
+
+              {error && (
+                <p className="text-xs text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-3 py-2">
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white font-semibold rounded-lg py-2.5 text-sm transition-colors"
+              >
+                {submitting
+                  ? 'Please wait…'
+                  : mode === 'login'
+                  ? 'Sign In'
+                  : mode === 'signup'
+                  ? 'Create Account'
+                  : 'Send Reset Link'}
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </div>

@@ -79,6 +79,16 @@ export async function signup(email: string, password: string, name: string) {
   return data
 }
 
+export async function requestPasswordReset(email: string) {
+  const { data } = await api.post('/auth/password-reset/', { email })
+  return data
+}
+
+export async function confirmPasswordReset(token: string, password: string) {
+  const { data } = await api.post('/auth/password-reset/confirm/', { token, password })
+  return data
+}
+
 export async function fetchOrganizations(): Promise<string[]> {
   const { data } = await api.get<string[]>('/auth/organizations/')
   return data

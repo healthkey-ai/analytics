@@ -8,6 +8,7 @@ export interface AuthState {
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   signup: (email: string, password: string, name: string) => Promise<void>
+  setUser: (user: User) => void
 }
 
 export function useAuth(): AuthState {
@@ -36,5 +37,5 @@ export function useAuth(): AuthState {
     setUser(data)
   }, [])
 
-  return { user, loading, login, logout, signup }
+  return { user, loading, login, logout, signup, setUser }
 }
