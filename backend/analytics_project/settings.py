@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "drf_yasg",
+    "anymail",
     "accounts",
     "patients",
     "cohorts",
@@ -92,6 +93,28 @@ if not DEBUG:
     CSRF_TRUSTED_ORIGINS += ["https://prism.healthkey.ai"]
 else:
     CSRF_TRUSTED_ORIGINS += ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+# Email — Mailgun via django-anymail when MAILGUN_API_KEY is set; console in dev.
+_mailgun_configured = bool(
+    os.environ.get("MAILGUN_API_KEY") and os.environ.get("MAILGUN_SENDER_DOMAIN")
+)
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    "anymail.backends.mailgun.EmailBackend" if _mailgun_configured
+    else "django.core.mail.backends.console.EmailBackend",
+)
+ANYMAIL = {}
+if os.environ.get("MAILGUN_API_KEY"):
+    ANYMAIL["MAILGUN_API_KEY"] = os.environ["MAILGUN_API_KEY"]
+if os.environ.get("MAILGUN_SENDER_DOMAIN"):
+    ANYMAIL["MAILGUN_SENDER_DOMAIN"] = os.environ["MAILGUN_SENDER_DOMAIN"]
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "HealthKey Analytics <noreply@healthkey.ai>")
+
+# Base URL used when building password-reset links in emails.
+APP_BASE_URL = os.environ.get(
+    "APP_BASE_URL",
+    os.environ.get("RENDER_EXTERNAL_URL", "http://localhost:5173"),
+).rstrip("/")
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"

@@ -2,13 +2,29 @@ import { useState } from 'react'
 import CohortPanel from './components/CohortPanel'
 import Dashboard from './components/Dashboard'
 import LoginPage from './components/Auth/LoginPage'
+import ResetPassword from './components/Auth/ResetPassword'
 import { useAnalytics } from './hooks/useAnalytics'
 import { useAuth } from './hooks/useAuth'
 import type { AuthState } from './hooks/useAuth'
 import type { CohortFilters } from './types'
 
+function getResetParams(): { uid: string; token: string } | null {
+  const p = new URLSearchParams(window.location.search)
+  const uid = p.get('uid')
+  const token = p.get('token')
+  if (uid && token && window.location.pathname === '/reset-password') {
+    return { uid, token }
+  }
+  return null
+}
+
 export default function App() {
   const auth = useAuth()
+  const resetParams = getResetParams()
+
+  if (resetParams) {
+    return <ResetPassword uid={resetParams.uid} token={resetParams.token} />
+  }
 
   if (auth.loading) {
     return (
