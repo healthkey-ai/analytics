@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS identity (
     is_active           bool NOT NULL DEFAULT 1,
     is_staff            bool NOT NULL DEFAULT 0,
     is_premium          bool NOT NULL DEFAULT 0,
-    failed_login_count  integer NOT NULL DEFAULT 0,
+    failed_login_count  integer NOT NULL,
     created_at          datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX IF NOT EXISTS identity_local_email_uidx
