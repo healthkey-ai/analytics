@@ -55,20 +55,22 @@ CREATE TABLE IF NOT EXISTS accounts_identity_user_permissions (
 
 CREATE_IDENTITY_SQLITE = """
 CREATE TABLE IF NOT EXISTS identity (
-    id                  integer PRIMARY KEY AUTOINCREMENT,
-    password            varchar(128) NOT NULL,
-    last_login          datetime,
-    is_superuser        bool NOT NULL DEFAULT 0,
-    issuer              varchar(255) NOT NULL,
-    sub                 varchar(255) NOT NULL,
-    uid                 varchar(512) NOT NULL UNIQUE,
-    email               varchar(254) NOT NULL,
-    name                varchar(255) NOT NULL DEFAULT '',
-    is_active           bool NOT NULL DEFAULT 1,
-    is_staff            bool NOT NULL DEFAULT 0,
-    is_premium          bool NOT NULL DEFAULT 0,
-    failed_login_count  integer NOT NULL,
-    created_at          datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id                   integer PRIMARY KEY AUTOINCREMENT,
+    password             varchar(128) NOT NULL,
+    last_login           datetime,
+    is_superuser         bool NOT NULL DEFAULT 0,
+    issuer               varchar(255) NOT NULL,
+    sub                  varchar(255) NOT NULL,
+    uid                  varchar(512) NOT NULL UNIQUE,
+    email                varchar(254) NOT NULL,
+    name                 varchar(255) NOT NULL DEFAULT '',
+    is_active            bool NOT NULL DEFAULT 1,
+    is_staff             bool NOT NULL DEFAULT 0,
+    is_premium           bool NOT NULL DEFAULT 0,
+    must_change_password bool NOT NULL,
+    failed_login_count   integer NOT NULL,
+    locked_until         datetime,
+    created_at           datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX IF NOT EXISTS identity_local_email_uidx
     ON identity (lower(email))

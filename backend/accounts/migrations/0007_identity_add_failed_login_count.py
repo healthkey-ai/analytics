@@ -1,35 +1,47 @@
 """
-Add failed_login_count to the identity table.
+Sync identity columns that PROMOP added after PRism's initial migration.
 
-In production the column already exists (PROMOP owns the schema).
-The Postgres branch uses ADD COLUMN IF NOT EXISTS so it is a no-op there.
-The SQLite branch checks PRAGMA table_info so it is safe on existing test DBs.
+In production these columns already exist (PROMOP owns the schema).
+ADD COLUMN IF NOT EXISTS / PRAGMA checks make every branch a safe no-op.
+
+Source of truth: /Users/adam/promop/patient_portal/models.py Identity model.
 """
 from django.db import migrations
 
+_SQLITE_COLUMNS = [
+    ("failed_login_count",   "integer NOT NULL DEFAULT 0"),
+    ("must_change_password", "bool NOT NULL DEFAULT 0"),
+    ("locked_until",         "datetime"),
+]
 
-def add_column(apps, schema_editor):
+_PG_COLUMNS = [
+    ("failed_login_count",   "integer NOT NULL DEFAULT 0"),
+    ("must_change_password", "boolean NOT NULL DEFAULT false"),
+    ("locked_until",         "timestamptz"),
+]
+
+
+def add_columns(apps, schema_editor):
     if schema_editor.connection.vendor == "sqlite":
         cursor = schema_editor.connection.cursor()
         cursor.execute("PRAGMA table_info(identity)")
-        columns = [row[1] for row in cursor.fetchall()]
-        if "failed_login_count" not in columns:
-            schema_editor.execute(
-                "ALTER TABLE identity ADD COLUMN failed_login_count integer NOT NULL DEFAULT 0"
-            )
+        existing = {row[1] for row in cursor.fetchall()}
+        for col, defn in _SQLITE_COLUMNS:
+            if col not in existing:
+                schema_editor.execute(f"ALTER TABLE identity ADD COLUMN {col} {defn}")
     else:
-        schema_editor.execute(
-            "ALTER TABLE identity ADD COLUMN IF NOT EXISTS failed_login_count integer NOT NULL DEFAULT 0"
-        )
+        for col, defn in _PG_COLUMNS:
+            schema_editor.execute(
+                f"ALTER TABLE identity ADD COLUMN IF NOT EXISTS {col} {defn}"
+            )
 
 
-def remove_column(apps, schema_editor):
-    # Postgres only; SQLite doesn't support DROP COLUMN on older versions and
-    # production owns this column via PROMOP anyway.
+def remove_columns(apps, schema_editor):
     if schema_editor.connection.vendor != "sqlite":
-        schema_editor.execute(
-            "ALTER TABLE identity DROP COLUMN IF EXISTS failed_login_count"
-        )
+        for col, _ in _PG_COLUMNS:
+            schema_editor.execute(
+                f"ALTER TABLE identity DROP COLUMN IF EXISTS {col}"
+            )
 
 
 class Migration(migrations.Migration):
@@ -39,5 +51,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(add_column, reverse_code=remove_column),
+        migrations.RunPython(add_columns, reverse_code=remove_columns),
     ]
