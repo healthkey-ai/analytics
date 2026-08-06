@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "rest_framework",
+    "anymail",
     "corsheaders",
     "accounts",
     "patients",
@@ -92,16 +93,23 @@ if not DEBUG:
 else:
     CSRF_TRUSTED_ORIGINS += ["http://localhost:5173", "http://127.0.0.1:5173"]
 
-# Email — use console backend in dev; configure SMTP via env in production
-if DEBUG:
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-else:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-    EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.sendgrid.net")
-    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
-    EMAIL_USE_TLS = True
-    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "apikey")
-    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+# Email — Mailgun via anymail when API key is present, console otherwise
+_mailgun_configured = bool(
+    os.environ.get("MAILGUN_API_KEY") and os.environ.get("MAILGUN_SENDER_DOMAIN")
+)
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    (
+        "anymail.backends.mailgun.EmailBackend"
+        if _mailgun_configured
+        else "django.core.mail.backends.console.EmailBackend"
+    ),
+)
+ANYMAIL = {}
+if os.environ.get("MAILGUN_API_KEY"):
+    ANYMAIL["MAILGUN_API_KEY"] = os.environ["MAILGUN_API_KEY"]
+if os.environ.get("MAILGUN_SENDER_DOMAIN"):
+    ANYMAIL["MAILGUN_SENDER_DOMAIN"] = os.environ["MAILGUN_SENDER_DOMAIN"]
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@healthkey.ai")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://prism.healthkey.ai")
 
