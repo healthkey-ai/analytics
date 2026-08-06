@@ -6,7 +6,7 @@ npm install
 npm run build
 
 cd ../backend
-pip install -r requirements.txt
+pip install --upgrade -r requirements.txt
 python manage.py migrate --noinput
 python manage.py sync_organizations
 python manage.py collectstatic --noinput
