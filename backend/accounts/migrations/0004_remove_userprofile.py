@@ -34,8 +34,8 @@ BEGIN
         SELECT FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'organization'
     ) THEN
-        INSERT INTO group_access (identity_id, org_id, role)
-        SELECT up.user_id, po.id, 'member'
+        INSERT INTO group_access (identity_id, org_id, role, granted_at)
+        SELECT up.user_id, po.id, 'member', NOW()
         FROM accounts_userprofile up
         JOIN organization po ON po.name = up.organization
         WHERE up.organization IS NOT NULL AND up.organization <> ''
