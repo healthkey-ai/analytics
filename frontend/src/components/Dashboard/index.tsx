@@ -541,10 +541,13 @@ export default function Dashboard({ metrics, loading, disease, user, onLogout, a
 
             <MetricCard
               title="Disease Staging & Characteristics"
-              description="Distribution of ISS/R-ISS staging, cytogenetic risk groups (high-risk vs. standard-risk), SCT eligibility and history, CRAB criteria, and other disease-defining characteristics at baseline. Higher proportions of ISS Stage III or high-risk cytogenetics indicate a more aggressive disease population."
+              description={isMultipleMyeloma
+                ? "Distribution of ISS/R-ISS staging, cytogenetic risk groups (high-risk vs. standard-risk), SCT eligibility and history, CRAB criteria, and other disease-defining characteristics at baseline. Higher proportions of ISS Stage III or high-risk cytogenetics indicate a more aggressive disease population."
+                : "Distribution of disease staging, cytogenetic risk groups, ECOG performance status, and other disease-defining characteristics at baseline."
+              }
             
               onExport={canExport ? chartExportHandler('staging') : undefined}>
-              {metrics?.staging ? <StagingPanel data={metrics.staging} /> : <NoDataPlaceholder />}
+              {metrics?.staging ? <StagingPanel data={metrics.staging} isMM={isMultipleMyeloma} /> : <NoDataPlaceholder />}
             </MetricCard>
 
             <MetricCard

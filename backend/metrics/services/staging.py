@@ -36,7 +36,7 @@ def compute(qs):
         t1416=Count('id',       filter=Q(cytogenic_markers__icontains='t(14;16)')),
         q121=Count('id',        filter=Q(cytogenic_markers__icontains='1q21')),
         hyperdiploid=Count('id',filter=Q(cytogenic_markers__icontains='hyperdiploidy')),
-        std_risk=Count('id',    filter=~HIGH_RISK_CYTO & (Q(cytogenic_markers='') | Q(cytogenic_markers__isnull=True))),
+        std_risk=Count('id',    filter=~HIGH_RISK_CYTO & ~Q(cytogenic_markers__isnull=True) & ~Q(cytogenic_markers='')),
         sct_count=Count('id',   filter=HAS_SCT),
     )
 
