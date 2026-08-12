@@ -25,6 +25,7 @@ const CHART_COLORS = [
 
 interface Props {
   data: MetricsResponse['staging']
+  isMM?: boolean
 }
 
 function NoData() {
@@ -35,7 +36,7 @@ function NoData() {
   )
 }
 
-export default function StagingPanel({ data }: Props) {
+export default function StagingPanel({ data, isMM = false }: Props) {
   if (!data) {
     return (
       <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
@@ -44,8 +45,8 @@ export default function StagingPanel({ data }: Props) {
     )
   }
 
-  const hasCrab = data.crab && data.crab.length > 0
-  const hasBone = data.bone_lesions && data.bone_lesions.length > 0
+  const hasCrab = isMM && data.crab && data.crab.length > 0
+  const hasBone = isMM && data.bone_lesions && data.bone_lesions.length > 0
 
   return (
     <div className="grid grid-cols-2 gap-6">
@@ -212,23 +213,25 @@ export default function StagingPanel({ data }: Props) {
         </div>
       )}
 
-      {/* SCT stat */}
-      <div className={hasCrab || hasBone ? '' : 'col-span-2'}>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-          Stem Cell Transplant
-        </p>
-        <div className="flex items-center gap-4 p-4 bg-teal-50 rounded-lg border border-teal-100">
-          <div className="text-3xl font-bold text-teal-700">
-            {data.sct_pct != null ? `${data.sct_pct.toFixed(1)}%` : 'N/A'}
-          </div>
-          <div>
-            <p className="text-sm font-medium text-teal-900">Received ASCT</p>
-            {data.sct_count != null && (
-              <p className="text-xs text-teal-600">{data.sct_count} patients</p>
-            )}
+      {/* SCT stat — MM only */}
+      {isMM && (
+        <div className={hasCrab || hasBone ? '' : 'col-span-2'}>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Stem Cell Transplant
+          </p>
+          <div className="flex items-center gap-4 p-4 bg-teal-50 rounded-lg border border-teal-100">
+            <div className="text-3xl font-bold text-teal-700">
+              {data.sct_pct != null ? `${data.sct_pct.toFixed(1)}%` : 'N/A'}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-teal-900">Received ASCT</p>
+              {data.sct_count != null && (
+                <p className="text-xs text-teal-600">{data.sct_count} patients</p>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
