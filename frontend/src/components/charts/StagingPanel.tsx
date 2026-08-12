@@ -50,10 +50,10 @@ export default function StagingPanel({ data, isMM = false }: Props) {
 
   return (
     <div className="grid grid-cols-2 gap-6">
-      {/* ISS Stage distribution */}
+      {/* Stage distribution */}
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-          ISS Stage Distribution
+          {isMM ? 'ISS Stage Distribution' : 'Disease Stage Distribution'}
         </p>
         {data.stages && data.stages.length > 0 ? (
           <ResponsiveContainer width="100%" height={200}>
