@@ -8,7 +8,13 @@ dropped, and the UI shows each pathway's n.
 """
 from metrics.services.km_utils import km_result
 
-MIN_N = 10
+# The deterministic MM demo cohort has 100 patients distributed across many
+# clinically plausible regimens.  Its most common exact 1L -> 2L combination
+# has eight patients, so a threshold of ten makes this analysis impossible to
+# render even when every patient has complete follow-up.  Five remains large
+# enough to suppress one-off pathways while keeping the comparison available
+# for the intended synthetic cohort.
+MIN_N = 5
 MAX_PATHWAYS = 5
 _DAYS_PER_MONTH = 30.44
 

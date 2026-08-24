@@ -53,6 +53,15 @@ def test_drops_combos_below_min_n():
     assert [p["label"] for p in result["pathways"]] == ["A → B"]
 
 
+def test_includes_a_small_but_comparable_pathway():
+    """The MM seed cohort's common pathways are typically 5–8 patients."""
+    rows = _combo_rows("VRd", "Daratumumab", 5)
+
+    result = compute(_FakeQS(rows))
+
+    assert [p["label"] for p in result["pathways"]] == ["VRd → Daratumumab"]
+
+
 def test_caps_at_max_pathways():
     rows = []
     for i in range(pathway_outcomes.MAX_PATHWAYS + 2):
