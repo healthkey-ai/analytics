@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Backfill death_date for the 100 MM patients (person_id 300-399).
+Backfill death_date for the synthetic Multiple Myeloma cohort.
 
 Death timing is calibrated against published real-world MM survival data:
   - 5-year OS ~55% with modern frontline therapy (SEER 2015-2021)
@@ -13,6 +13,7 @@ Target: ~50% of patients deceased by study cutoff 2026-05-31.
 import os
 import random
 import psycopg2
+from psycopg2.extras import execute_values
 from datetime import date, timedelta
 
 DB_URL = os.environ["DATABASE_URL"]
@@ -20,6 +21,11 @@ DB_URL = os.environ["DATABASE_URL"]
 random.seed(99)  # different seed so death dates are independent of treatment choices
 
 CUTOFF = date(2026, 5, 31)
+
+# The original standalone seed used ``MM``.  The FHIR loader used for the
+# staging cohort writes the canonical slug below instead.  Keep both so a
+# reload cannot silently leave the analytics cohort without OS events again.
+MM_DISEASE_SLUGS = ("MM", "multiple-myeloma")
 
 
 def add_months(d, months):
@@ -121,22 +127,36 @@ def run():
                later_end_date,        later_outcome,
                last_treatment, therapy_lines_count,
                tp53_disruption, cytogenic_markers
-        FROM patient_info
-        WHERE disease_slug = 'MM'
+        FROM patient_record
+        WHERE disease_slug = ANY(%s)
         ORDER BY person_id
-    """)
+    """, (list(MM_DISEASE_SLUGS),))
     cols = [d[0] for d in cur.description]
     rows = [dict(zip(cols, r)) for r in cur.fetchall()]
 
+    updates = []
     deaths = 0
     for row in rows:
         dd = compute_death_date(row)
-        cur.execute(
-            "UPDATE patient_info SET death_date = %s WHERE person_id = %s",
-            (dd, row["person_id"])
-        )
+        updates.append((dd, row["person_id"]))
         if dd:
             deaths += 1
+
+    # The original one-row-at-a-time update exceeded the staging connection's
+    # practical request window for a 1,000-patient cohort.  Use one bounded
+    # set-based update so the entire synthetic cohort is committed atomically.
+    execute_values(
+        cur,
+        """
+        UPDATE patient_record AS p
+        SET death_date = v.death_date
+        FROM (VALUES %s) AS v(death_date, person_id)
+        WHERE p.person_id = v.person_id
+        """,
+        updates,
+        template="(%s::date, %s)",
+        page_size=2000,
+    )
 
     conn.commit()
     cur.close()
@@ -154,8 +174,8 @@ def run():
             ROUND(AVG(EXTRACT(MONTH FROM AGE(death_date, first_line_start_date))
                       + 12 * EXTRACT(YEAR FROM AGE(death_date, first_line_start_date)))
                   FILTER (WHERE death_date IS NOT NULL), 1) AS avg_os_months
-        FROM patient_info WHERE disease_slug = 'MM'
-    """)
+        FROM patient_record WHERE disease_slug = ANY(%s)
+    """, (list(MM_DISEASE_SLUGS),))
     print(dict(zip([d[0] for d in cur2.description], cur2.fetchone())))
     cur2.close()
     conn2.close()

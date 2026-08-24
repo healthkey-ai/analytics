@@ -1,9 +1,41 @@
-"""Tests for apply_cohort_filters org and date params."""
+"""Tests for apply_cohort_filters org, date, and stage alias params."""
 import datetime
 from unittest.mock import patch, MagicMock
 
 import pytest
+from django.db.models import Q
 from django.http import QueryDict
+
+
+def _matches(row, kwargs):
+    """Evaluate simple field lookups against a dict row.
+
+    Supports exact, in, icontains, iexact, gte, lte. Q objects arrive as
+    positional args and do not narrow here — sufficient for the funnel tests,
+    which need counts that actually decrease under filtering.
+    """
+    for key, val in kwargs.items():
+        field, _, lookup = key.partition("__")
+        v = row.get(field)
+        if lookup in ("", "exact"):
+            if v != val:
+                return False
+        elif lookup == "in":
+            if v not in val:
+                return False
+        elif lookup == "icontains":
+            if v is None or str(val).lower() not in str(v).lower():
+                return False
+        elif lookup == "iexact":
+            if v is None or str(v).lower() != str(val).lower():
+                return False
+        elif lookup == "gte":
+            if v is None or v < val:
+                return False
+        elif lookup == "lte":
+            if v is None or v > val:
+                return False
+    return True
 
 
 class _FakeQS:
@@ -12,10 +44,12 @@ class _FakeQS:
     def __init__(self, rows=None):
         self._rows = rows or []
         self._filters = {}
+        self._q_args = []
 
     def filter(self, *args, **kwargs):
-        clone = _FakeQS(self._rows)
+        clone = _FakeQS([r for r in self._rows if _matches(r, kwargs)])
         clone._filters = {**self._filters, **kwargs}
+        clone._q_args = self._q_args + list(args)
         return clone
 
     def exclude(self, *args, **kwargs):
@@ -35,11 +69,18 @@ class _FakeQS:
     def order_by(self, *args):
         return self
 
+    def count(self):
+        return len(self._rows)
+
 
 def _make_request(params: dict):
     """Build a minimal request-like object with QueryDict-backed query_params."""
     qd = QueryDict(mutable=True)
-    qd.update(params)
+    for key, val in params.items():
+        if isinstance(val, list):
+            qd.setlist(key, [str(v) for v in val])
+        else:
+            qd[key] = str(val)
     req = MagicMock()
     req.query_params = qd
     return req
@@ -54,22 +95,149 @@ def patch_patient_qs(monkeypatch):
         yield fake
 
 
-def _run_filters(params: dict) -> _FakeQS:
+def _run_filters(params: dict, **kwargs) -> _FakeQS:
     from cohorts.filters import apply_cohort_filters
     req = _make_request(params)
-    return apply_cohort_filters(req)
+    return apply_cohort_filters(req, **kwargs)
 
 
 # ── org filter ────────────────────────────────────────────────────────────────
 
 def test_org_filter_applied():
-    result = _run_filters({"org": "Mayo Clinic"})
-    assert result._filters.get("organization__name__iexact") == "Mayo Clinic"
+    with patch("cohorts.filters.resolve_org_filter_names", return_value=["Mayo Clinic"]):
+        result = _run_filters({"org": "Mayo Clinic"})
+    assert result._filters.get("organization__name__in") == ["Mayo Clinic"]
 
 
 def test_org_filter_not_applied_when_absent():
     result = _run_filters({})
-    assert "organization__name__iexact" not in result._filters
+    assert "organization__name__in" not in result._filters
+
+
+# ── demographic filters ──────────────────────────────────────────────────────
+
+def test_gender_filter_accepts_male_label():
+    result = _run_filters({"gender": "Male"})
+    assert result._filters.get("gender__in") == ["M", "m", "Male", "male", "MALE"]
+
+
+def test_gender_filter_accepts_female_code():
+    result = _run_filters({"gender": "F"})
+    assert result._filters.get("gender__in") == ["F", "f", "Female", "female", "FEMALE"]
+
+
+def test_country_filter_applied_as_multi_value():
+    result = _run_filters({"country": ["US", "GB"]})
+    assert result._filters.get("country__in") == ["US", "GB"]
+
+
+def test_country_filter_not_applied_when_absent():
+    result = _run_filters({})
+    assert "country__in" not in result._filters
+
+
+# ── disease filter / transformation broadening ───────────────────────────────
+
+def test_disease_filter_is_plain_icontains_by_default():
+    result = _run_filters({"disease": "Follicular Lymphoma"})
+    assert result._filters.get("disease__icontains") == "Follicular Lymphoma"
+    assert result._q_args == []
+
+
+def test_include_transformed_broadens_disease_filter():
+    """Transformed patients have DLBCL as their current disease — the broadened
+    filter must OR the disease match with transformed_to_dlbcl=True."""
+    result = _run_filters({"disease": "Follicular Lymphoma"}, include_transformed=True)
+    assert "disease__icontains" not in result._filters
+    assert result._q_args == [
+        Q(disease__icontains="Follicular Lymphoma") | Q(transformed_to_dlbcl=True)
+    ]
+
+
+def test_include_transformed_without_disease_adds_no_filter():
+    result = _run_filters({}, include_transformed=True)
+    assert "disease__icontains" not in result._filters
+    assert result._q_args == []
+
+
+# ── eligibility funnel ───────────────────────────────────────────────────────
+
+def test_funnel_counts_reflect_cumulative_narrowing(patch_patient_qs):
+    """Step counts must decrease as each filter group narrows the population —
+    guards against recording steps on the pre-filter queryset."""
+    patch_patient_qs._rows = [
+        {"disease": "Follicular Lymphoma", "country": "US"},
+        {"disease": "Follicular Lymphoma", "country": "US"},
+        {"disease": "Follicular Lymphoma", "country": "GB"},
+        {"disease": "Multiple Myeloma", "country": "US"},
+    ]
+    steps = []
+    _run_filters({"disease": "Follicular Lymphoma", "country": ["US"]},
+                 qs=patch_patient_qs, funnel=steps)
+    assert [(s["key"], s["label"], s["count"]) for s in steps] == [
+        ("disease_stage", "Disease & stage", 3),
+        ("geography", "Geography", 2),
+    ]
+
+
+def test_funnel_records_all_groups_when_all_filters_applied(patch_patient_qs):
+    patch_patient_qs._rows = [{}] * 5
+    steps = []
+    _run_filters(
+        {
+            "disease": "Multiple Myeloma",
+            "stage": ["ISS Stage II"],
+            "age_min": 18,
+            "country": ["US"],
+            "ecog": ["1"],
+            "high_risk_cytogenetics": "true",
+            "therapy_lines_min": 1,
+            "meets_crab": "true",
+            "hemoglobin_min": 10,
+            "date": "this_year",
+        },
+        qs=patch_patient_qs,
+        funnel=steps,
+    )
+    assert [s["key"] for s in steps] == [
+        "disease_stage", "demographics", "geography", "performance",
+        "cytogenetics", "treatment_history", "disease_characteristics",
+        "labs", "diagnosis_period",
+    ]
+
+
+def test_funnel_records_nothing_when_no_filters(patch_patient_qs):
+    steps = []
+    _run_filters({}, qs=patch_patient_qs, funnel=steps)
+    assert steps == []
+
+
+def test_base_queryset_param_is_used():
+    custom = _FakeQS(rows=[{}] * 3)
+    from cohorts.filters import apply_cohort_filters
+    req = _make_request({})
+    assert apply_cohort_filters(req, qs=custom) is custom
+
+
+def test_funnel_without_base_queryset_raises():
+    """funnel= without an org-scoped qs= would count across every org's
+    patients — must fail loudly rather than leak cross-org aggregates."""
+    from cohorts.filters import apply_cohort_filters
+    req = _make_request({"disease": "Multiple Myeloma"})
+    with pytest.raises(ValueError, match="org-scoped"):
+        apply_cohort_filters(req, funnel=[])
+
+
+# ── stage filters ────────────────────────────────────────────────────────────
+
+def test_breast_cancer_stage_filter_expands_qualifier_aliases():
+    result = _run_filters({"disease": "Breast Cancer", "stage": ["II"]})
+    assert result._filters.get("stage__in") == ["Stage II", "Stage 2 (qualifier value)"]
+
+
+def test_non_breast_stage_filter_is_not_rewritten():
+    result = _run_filters({"disease": "Multiple Myeloma", "stage": ["ISS Stage II"]})
+    assert result._filters.get("stage__in") == ["ISS Stage II"]
 
 
 # ── date filter ───────────────────────────────────────────────────────────────

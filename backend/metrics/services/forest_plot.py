@@ -1,13 +1,23 @@
 """
 Forest plot: per-subgroup OS hazard ratios with 95% CI (Peto method).
 Each row compares a binary split of the cohort on a clinical variable.
+
+Computed for multiple myeloma cohorts (gated in metrics.views), so the splits
+are MM-relevant: cytogenetic risk, R-ISS stage, SCT, age, and MRD status.
 """
 from django.db.models import Q
 
 from metrics.services.km_utils import log_rank_hr
 from metrics.services.survival import _os_times_events
+from metrics.services.clinical_filters import HIGH_RISK_CYTO, HAS_SCT, NO_SCT
 
 _MIN_PER_ARM = 5  # skip row if either arm has fewer than this many OS observations
+
+# Patients with a cytogenetics / stage value recorded (unevaluable patients — no
+# workup — must not silently fall into the reference arm).
+_CYTO_TESTED = ~Q(cytogenic_markers__isnull=True) & ~Q(cytogenic_markers="")
+_STAGED = ~Q(stage__isnull=True) & ~Q(stage="")
+_STAGE_LATE = Q(stage__icontains="III")  # R-ISS III (vs I/II)
 
 
 def _row(subgroup, comparison, reference, te_comp, te_ref):
@@ -34,29 +44,24 @@ def compute(qs):
     splits = [
         # (subgroup label, comparison label, reference label, comp filter Q, ref filter Q)
         (
-            "ER Status", "ER Positive", "ER Negative",
-            Q(estrogen_receptor_status__icontains="positive"),
-            Q(estrogen_receptor_status__icontains="negative"),
+            "Cytogenetic Risk", "High Risk", "Standard Risk",
+            _CYTO_TESTED & HIGH_RISK_CYTO,
+            _CYTO_TESTED & ~HIGH_RISK_CYTO,
         ),
         (
-            "HER2 Status", "HER2 Positive", "HER2 Negative",
-            Q(her2_status__icontains="positive"),
-            Q(her2_status__icontains="negative"),
+            "R-ISS Stage", "Late (III)", "Early (I/II)",
+            _STAGED & _STAGE_LATE,
+            _STAGED & ~_STAGE_LATE,
         ),
         (
-            "TNBC", "TNBC", "Non-TNBC",
-            Q(tnbc_status=True),
-            Q(tnbc_status=False),
+            "SCT", "SCT", "No SCT",
+            HAS_SCT,
+            NO_SCT,
         ),
         (
-            "Stage", "Late (III/IV)", "Early (I/II)",
-            Q(stage__iregex=r"stage\s+(iii|iv)"),
-            Q(stage__iregex=r"stage\s+i{1,2}(\s|$)"),
-        ),
-        (
-            "Age", "≥50 years", "<50 years",
-            Q(patient_age__gte=50),
-            Q(patient_age__lt=50),
+            "Age", "≥65 years", "<65 years",
+            Q(patient_age__gte=65),
+            Q(patient_age__lt=65),
         ),
         (
             "MRD Status", "MRD Negative", "MRD Positive",

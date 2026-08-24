@@ -28,6 +28,46 @@ class TestSignupView:
         resp = api_client.post(SIGNUP_URL, {"email": "dup@example.com", "password": "StrongPass123!"})
         assert resp.status_code == 400
 
+    def test_unusable_promop_placeholder_is_claimed(self, api_client, make_user):
+        placeholder = make_user(email="invited@example.com", password=None, name="")
+        assert not placeholder.has_usable_password()
+
+        resp = api_client.post(
+            SIGNUP_URL,
+            {
+                "email": "invited@example.com",
+                "password": "StrongPass123!",
+                "name": "Invited User",
+            },
+        )
+
+        assert resp.status_code == 201
+        placeholder.refresh_from_db()
+        assert resp.data["uid"] == placeholder.uid
+        assert placeholder.name == "Invited User"
+        assert placeholder.check_password("StrongPass123!")
+
+    def test_claimed_placeholder_can_log_in(self, api_client, make_user):
+        placeholder = make_user(email="login-invited@example.com", password=None)
+
+        signup_resp = api_client.post(
+            SIGNUP_URL,
+            {
+                "email": "login-invited@example.com",
+                "password": "StrongPass123!",
+                "name": "Login Invited",
+            },
+        )
+        assert signup_resp.status_code == 201
+
+        login_resp = api_client.post(
+            LOGIN_URL,
+            {"email": "login-invited@example.com", "password": "StrongPass123!"},
+        )
+
+        assert login_resp.status_code == 200
+        assert login_resp.data["uid"] == placeholder.uid
+
     def test_missing_email_rejected(self, api_client):
         resp = api_client.post(SIGNUP_URL, {"password": "StrongPass123!"})
         assert resp.status_code == 400
@@ -85,6 +125,32 @@ class TestMeView:
         assert resp.data["name"] == "Me User"
         assert "uid" in resp.data
         assert "is_staff" in resp.data
+
+    def test_role_user(self, api_client, make_user):
+        user = make_user(is_staff=False, is_superuser=False)
+        api_client.force_authenticate(user=user)
+        resp = api_client.get(ME_URL)
+        assert resp.data["role"] == "user"
+
+    def test_role_staff(self, api_client, make_user):
+        user = make_user(is_staff=True, is_superuser=False)
+        api_client.force_authenticate(user=user)
+        resp = api_client.get(ME_URL)
+        assert resp.data["role"] == "staff"
+
+    def test_role_admin(self, api_client, make_user):
+        user = make_user(is_staff=True, is_superuser=True)
+        api_client.force_authenticate(user=user)
+        resp = api_client.get(ME_URL)
+        assert resp.data["role"] == "admin"
+
+    def test_authenticated_includes_org_admin_flag(self, api_client, make_user, monkeypatch):
+        user = make_user(email="me@example.com", name="Me User")
+        api_client.force_authenticate(user=user)
+        monkeypatch.setattr("accounts.views.has_org_admin_access", lambda user: True)
+        resp = api_client.get(ME_URL)
+        assert resp.status_code == 200
+        assert resp.data["is_org_admin"] is True
 
     def test_unauthenticated_returns_403(self, api_client):
         resp = api_client.get(ME_URL)

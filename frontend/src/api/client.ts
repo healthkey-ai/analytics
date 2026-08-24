@@ -47,8 +47,10 @@ function toParams(filters: CohortFilters): URLSearchParams {
   return p
 }
 
-export async function fetchFormSettings(disease: string): Promise<FormSettings> {
-  const { data } = await api.get<FormSettings>(`/form-settings/?disease=${encodeURIComponent(disease)}`)
+export async function fetchFormSettings(disease: string, org?: string): Promise<FormSettings> {
+  const params = new URLSearchParams({ disease })
+  if (org) params.set('org', org)
+  const { data } = await api.get<FormSettings>(`/form-settings/?${params}`)
   return data
 }
 
@@ -74,6 +76,16 @@ export async function logout() {
 
 export async function signup(email: string, password: string, name: string) {
   const { data } = await api.post('/auth/signup/', { email, password, name })
+  return data
+}
+
+export async function requestPasswordReset(email: string) {
+  const { data } = await api.post('/auth/password-reset/', { email })
+  return data
+}
+
+export async function confirmPasswordReset(token: string, password: string) {
+  const { data } = await api.post('/auth/password-reset/confirm/', { token, password })
   return data
 }
 

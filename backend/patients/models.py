@@ -16,7 +16,7 @@ class SourceOrganization(models.Model):
 
 
 class PatientInfo(models.Model):
-    """Read-only mirror of promop.patient_info. managed=False — no migrations."""
+    """Read-only mirror of promop's patient_record table. managed=False — no migrations."""
 
     # demographics
     patient_age = models.IntegerField(null=True)
@@ -99,6 +99,11 @@ class PatientInfo(models.Model):
     death_date = models.DateField(null=True)
     mrd_status = models.TextField(null=True)
 
+    # histologic transformation of FL to DLBCL (PROMOP #226)
+    transformed_to_dlbcl = models.BooleanField(null=True)
+    dlbcl_transformation_date = models.DateField(null=True)
+    post_transformation_outcome = models.TextField(null=True)
+
     # treatment
     prior_therapy = models.TextField(null=True)
     therapy_lines_count = models.IntegerField(null=True)
@@ -146,7 +151,7 @@ class PatientInfo(models.Model):
 
     class Meta:
         managed = False
-        db_table = "patient_info"
+        db_table = "patient_record"
 
     def __str__(self):
         return f"PatientInfo {self.pk} – {self.disease}"

@@ -2,6 +2,7 @@ import uuid
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.utils import timezone
 
 
 class IdentityManager(BaseUserManager):
@@ -55,6 +56,9 @@ class Identity(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_premium = models.BooleanField(default=False)
+    must_change_password = models.BooleanField(default=False)
+    failed_login_count = models.IntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = IdentityManager()
@@ -90,3 +94,24 @@ class Organization(models.Model):
         return not self.allowed_email_domain
 
 
+TOKEN_EXPIRY_SECONDS = 3600  # 1 hour
+
+
+class PasswordResetToken(models.Model):
+    token = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)
+    identity = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reset_tokens",
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "accounts_password_reset_token"
+
+    def is_expired(self):
+        return (timezone.now() - self.created_at).total_seconds() > TOKEN_EXPIRY_SECONDS
+
+    def is_valid(self):
+        return self.used_at is None and not self.is_expired()

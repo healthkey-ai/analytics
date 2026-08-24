@@ -236,7 +236,7 @@ const chartData = useMemo(
 
 - `PatientInfo` uses `managed=False` — there are no Django migrations for it. Schema changes are applied directly to the database.
 - Service functions receive a queryset (`qs`) and apply `.filter()` / `.exclude()` / `.values_list()` / `.values()` against it. Never do `PatientInfo.objects.all()` inside a service — accept the queryset from the view layer so cohort filters compose correctly.
-- The `patient_info` table is a read-only mirror. Never write to it from the analytics app.
+- The `patient_record` table (PROMOP's patient record) is read-only for this app. Never write to it from the analytics app.
 
 ---
 

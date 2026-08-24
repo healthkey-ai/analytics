@@ -15,7 +15,7 @@ def _duration_table(qs, therapy_f, outcome_f, start_f, end_f):
             ) AS median_months,
             AVG(("{end_f}" - "{start_f}") / 30.44) AS mean_months,
             COUNT(*) AS cnt
-        FROM patient_info
+        FROM patient_record
         WHERE id IN ({subq_sql})
           AND "{therapy_f}" IS NOT NULL AND "{therapy_f}" != ''
           AND "{start_f}" IS NOT NULL AND "{end_f}" IS NOT NULL
@@ -54,7 +54,7 @@ def _ttft_distribution(qs):
             SUM(CASE WHEN (first_line_start_date - diagnosis_date) BETWEEN 91  AND 180 THEN 1 ELSE 0 END) AS b91_180,
             SUM(CASE WHEN (first_line_start_date - diagnosis_date) BETWEEN 181 AND 365 THEN 1 ELSE 0 END) AS b6_12m,
             SUM(CASE WHEN (first_line_start_date - diagnosis_date) BETWEEN 366 AND 730 THEN 1 ELSE 0 END) AS b12m
-        FROM patient_info
+        FROM patient_record
         WHERE id IN ({subq_sql})
           AND diagnosis_date IS NOT NULL
           AND first_line_start_date IS NOT NULL

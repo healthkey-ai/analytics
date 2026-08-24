@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: prism
+    runtime: python
+    pythonVersion: "3.12"
+    buildCommand: "./build.sh"
+    startCommand: "cd backend && gunicorn analytics_project.wsgi --workers 2 --timeout 120"
+    plan: starter
+
+    envVars:
+      # ── Secrets (set value in Render dashboard once; key is tracked here) ──
+      - key: SECRET_KEY
+        sync: false          # must match PROMOP's SECRET_KEY — shared session store
+
+      - key: DATABASE_URL
+        sync: false          # point to PROMOP's Postgres — shared identity/session tables
+
+      - key: EMAIL_HOST_PASSWORD
+        sync: false          # SendGrid API key
+
+      - key: MAILGUN_API_KEY
+        sync: false
+
+      - key: MAILGUN_SENDER_DOMAIN
+        value: "mg.healthkey.ai"
+
+      # ── Static values ────────────────────────────────────────────────────────
+      - key: DEBUG
+        value: "false"
+
+      - key: SESSION_COOKIE_DOMAIN
+        value: ".healthkey.ai"
+
+      - key: DEFAULT_FROM_EMAIL
+        value: "noreply@healthkey.ai"
+
+      - key: FRONTEND_URL
+        value: "https://prism.healthkey.ai"

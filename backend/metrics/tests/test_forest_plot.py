@@ -95,12 +95,12 @@ def _make_os_row(start_days, death_days=None, last_days=None):
         "first_line_start_date": start,
         "death_date":            death,
         "last_treatment":        last,
-        "estrogen_receptor_status": None,
-        "her2_status":           None,
-        "tnbc_status":           None,
-        "stage":                 None,
-        "patient_age":           None,
-        "mrd_status":            None,
+        # MM subgroup fields the forest plot now splits on
+        "cytogenic_markers":            "del(17p)",
+        "stem_cell_transplant_history": ["autologous SCT"],
+        "stage":                        "R-ISS III",
+        "patient_age":                  67,
+        "mrd_status":                   "MRD negative",
     }
 
 
@@ -114,3 +114,20 @@ def test_compute_too_few_patients_returns_empty():
     rows = [_make_os_row(0, death_days=200) for _ in range(3)]
     qs = _FakeQS(rows)
     assert compute(qs) == []
+
+
+def test_compute_reports_mm_subgroups():
+    """With enough patients and OS events, compute yields MM-relevant subgroup
+    rows (cytogenetics / R-ISS stage / SCT / age / MRD), not breast-cancer ones.
+
+    _FakeQS ignores the split predicates, so both arms see the same rows — the
+    HR is ≈1 but computable, which is all this smoke test needs to confirm the
+    splits are wired and labelled correctly.
+    """
+    rows = [_make_os_row(0, death_days=200 + i * 10) for i in range(10)]
+    result = compute(_FakeQS(rows))
+    subgroups = {r["subgroup"] for r in result}
+    assert subgroups == {"Cytogenetic Risk", "R-ISS Stage", "SCT", "Age", "MRD Status"}
+    for r in result:
+        assert r["ci_low"] <= r["hr"] <= r["ci_high"]
+        assert 0.0 <= r["p_value"] <= 1.0

@@ -4,7 +4,8 @@ export interface User {
   name: string
   is_staff: boolean
   is_premium: boolean
-  role: 'user' | 'staff'
+  is_org_admin: boolean
+  role: 'user' | 'staff' | 'admin'
 }
 
 export interface SavedCohort {
@@ -23,6 +24,7 @@ export interface CohortFilters {
   age_max?: number
   gender?: string
   race?: string[]
+  country?: string[]
   region?: string[]
   ecog?: number[]
   cytogenetic_markers?: string[]
@@ -59,6 +61,7 @@ export interface CohortFilters {
 
 export interface FormSettings {
   diseases: string[]
+  disease_counts?: Record<string, number>
   stages: string[]
   first_line_therapies: string[]
   second_line_therapies: string[]
@@ -66,6 +69,7 @@ export interface FormSettings {
   outcome_options: string[]
   cytogenetic_markers: string[]
   refractory_statuses: string[]
+  countries: string[]
   regions: string[]
   race_options: string[]
   mrd_status_options: string[]
@@ -115,6 +119,12 @@ export interface TreatmentDurationRow {
 
 export interface MetricsResponse {
   cohort: { count: number }
+  eligibility?: {
+    total: number
+    eligible: number
+    eligible_pct: number
+    steps: { key: string; label: string; count: number }[]
+  }
   response_rates: {
     first_line: TherapyOutcomes[]
     second_line: TherapyOutcomes[]
@@ -124,8 +134,10 @@ export interface MetricsResponse {
     first_line: TherapyCount[]
     second_line: TherapyCount[]
     later_line: TherapyCount[]
+    overall?: TherapyCount[]
     line_funnel: { line: number; label: string; count: number; pct: number }[]
     line_distribution: { lines: number; label: string; count: number; pct: number }[]
+    burden?: { median_lines: number | null; ge2_pct: number; ge3_pct: number }
     sequences: { sequence: string; count: number }[]
   }
   demographics: {
@@ -205,6 +217,44 @@ export interface MetricsResponse {
   incidence?: { quarter: string; diagnoses: number; treatment_starts: number }[]
   time_to_treatment?: { median_days: number|null; n: number; histogram: { label: string; count: number; lo: number; hi: number|null }[] }
   landmark_survival?: { curve: { time: number; survival: number; at_risk: number }[]; n: number; median: number|null; landmark_months: number }
+  disease_state?: {
+    states: { key: string; label: string; count: number; pct: number }[]
+    total: number
+  }
+  therapy_categories?: {
+    first_line: { category: string; count: number; pct: number }[]
+    second_line: { category: string; count: number; pct: number }[]
+    later_line: { category: string; count: number; pct: number }[]
+  }
+  pod24?: {
+    clock_start: string
+    window_months: number
+    landmark_months: number
+    groups: { key: string; label: string; count: number; pct: number }[]
+    os: SubgroupSurvivalLine[]
+    os_p: number | null
+  }
+  landmark_response?: {
+    clock_start: string
+    landmarks: { months: number; cr_count: number; evaluable: number; pct: number }[]
+  }
+  pathway_outcomes?: {
+    min_n: number
+    pathways: { label: string; n: number; os: SurvivalLine }[]
+  }
+  transformation?: {
+    evaluable: number
+    unknown: number
+    transformed_count: number
+    transformed_pct: number
+    time_to_transformation: {
+      n: number
+      median_months: number | null
+      histogram: { label: string; count: number; lo: number; hi: number | null }[]
+    }
+    outcome_distribution: { outcome: string; count: number; pct: number }[]
+    os_post_transformation: SurvivalLine
+  }
 }
 
 export interface ForestPlotRow {
@@ -241,4 +291,3 @@ export interface SwitchingRow {
   n_switched: number
   switches: { to_regimen: string; n: number; pct: number }[]
 }
-
